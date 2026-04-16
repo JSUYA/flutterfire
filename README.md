@@ -37,6 +37,16 @@ The current implementation removes the `.so` packaging model and replaces it wit
 
 Additional design notes and the migration plan live in [docs/flutter_tizen_plugins_migration.md](docs/flutter_tizen_plugins_migration.md).
 
+## Experimental Non-Pure-Dart Backends
+
+For comparison work, the repository also includes three experimental non-pure-Dart backend implementations under [experimental/](experimental/):
+
+- shared C++ runtime host
+- one-shot native protocol CLI
+- WebView JavaScript bridge
+
+The design notes for those experiments live in [docs/experimental_non_pure_dart_backends.md](docs/experimental_non_pure_dart_backends.md).
+
 ## Current Limitations
 
 - `firebase_auth_tizen`

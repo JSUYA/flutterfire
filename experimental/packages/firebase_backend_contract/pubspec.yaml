@@ -1,0 +1,10 @@
+name: firebase_backend_contract
+description: Shared contract types for experimental non-pure-Dart Firebase Tizen backends.
+version: 0.1.0
+publish_to: "none"
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dev_dependencies:
+  lints: ^5.1.1

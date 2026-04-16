@@ -1,0 +1,16 @@
+name: firebase_cpp_shared_runtime_backend
+description: Experimental shared C++ runtime backend for Firebase on Tizen.
+version: 0.1.0
+publish_to: "none"
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dependencies:
+  async: ^2.13.0
+  firebase_backend_contract:
+    path: ../firebase_backend_contract
+
+dev_dependencies:
+  lints: ^5.1.1
+  test: ^1.26.3
