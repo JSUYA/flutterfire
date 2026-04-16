@@ -1,27 +1,68 @@
 # FlutterFire for Tizen
 
-FlutterFire for Tizen is a set of plugins that enable Flutter apps to use Firebase services on Tizen devices. Each plugin operates as a platform package for [FlutterFire](https://github.com/firebase/flutterfire), taking the form of a [non-endorsed federated plugin](https://docs.flutter.dev/packages-and-plugins/developing-packages#non-endorsed-federated-plugin). The actual interaction with Firebase services relies on cross-compiled [Firebase C++ SDK](https://github.com/firebase/firebase-cpp-sdk) libraries.
+FlutterFire for Tizen is being redesigned as a pure Dart federated plugin set that fits the `flutter-tizen/plugins` package layout.
 
-## Pre-Alpha Plugins
+The previous approach bundled cross-compiled Firebase C++ shared libraries into each plugin. That created three structural problems on Tizen:
 
-| Name                   | pub.dev           | Firebase Product                                                     | Documentation                                                     | View Source             |
-|------------------------|:-----------------:|:--------------------------------------------------------------------:|:-----------------------------------------------------------------:|:-----------------------:|
-| Cloud Functions        | REPLACEME         | [🔗](https://firebase.google.com/products/functions)                 | [📖](https://firebase.flutter.dev/docs/functions/overview)        | [`cloud_functions`](packages/cloud_functions)                       |
-| Core                   | REPLACEME         | [🔗](https://firebase.google.com)                                    | [📖](https://firebase.flutter.dev/docs/core/usage)                | [`firebase_core`](packages/firebase_core)                           |
-| Realtime Database      | REPLACEME         | [🔗](https://firebase.google.com/products/database)                  | [📖](https://firebase.flutter.dev/docs/database/overview)         | [`firebase_database`](packages/firebase_database)                   |
-| Storage                | REPLACEME         | [🔗](https://firebase.google.com/products/storage)                   | [📖](https://firebase.flutter.dev/docs/storage/overview)          | [`firebase_storage`](packages/firebase_storage)                   |
+- package size grew quickly as more Firebase plugins were added
+- each plugin duplicated native libraries and build artifacts
+- the desktop-style C++ integration path is not a good long-term fit for `flutter-tizen/plugins`
 
-Please note that the plugins are now in an early stage of development, as they're based on the experimental implementation of the Firebase C++ SDK for Linux desktop ([v10.4.0](https://github.com/firebase/firebase-cpp-sdk/tree/v10.4.0)). Our plan is to initially provide development versions first, and then gradually transition to a stable version as a subsequent step following stable SDK releases.
+The current implementation removes the `.so` packaging model and replaces it with:
 
-## Supported Devices
+- `firebase_dart` for Core, Auth, Realtime Database, and Storage
+- direct HTTPS callable protocol support for Cloud Functions
+- pure Dart Tizen plugin registration via `dartPluginClass`
 
-| Name                   | API level |   TV  |   TV<br>emulator   |
-|------------------------|:---------:|:-----:|:------------------:|
-| Cloud Functions        | 7.0       | ✔️     | ✔️                  |
-| Core                   | 7.0       | ✔️     | ✔️                  |
-| Realtime Database      | 7.0       | ✔️     | ✔️                  |
-| Storage                | 7.0       | ✔️     | ✔️                  |
+## Implemented Packages
+
+| Package | Status | Backend |
+| --- | --- | --- |
+| `firebase_core_tizen` | Implemented | `firebase_dart` |
+| `firebase_auth_tizen` | Implemented | `firebase_dart` |
+| `firebase_database_tizen` | Implemented | `firebase_dart` |
+| `firebase_storage_tizen` | Implemented | `firebase_dart` |
+| `cloud_functions_tizen` | Implemented | HTTPS callable protocol |
+
+## Design Direction
+
+- Keep each package in the same shape expected by `flutter-tizen/plugins`.
+- Prefer pure Dart adapters over bundled native Firebase SDK binaries.
+- Stay aligned with current FlutterFire major interfaces:
+  - `firebase_core` 4.x
+  - `firebase_auth` 6.x
+  - `cloud_functions` 6.x
+  - `firebase_database` 12.x
+  - `firebase_storage` 13.x
+
+Additional design notes and the migration plan live in [docs/flutter_tizen_plugins_migration.md](docs/flutter_tizen_plugins_migration.md).
+
+## Current Limitations
+
+- `firebase_auth_tizen`
+  - phone auth is not implemented
+  - popup and redirect OAuth flows are not implemented
+  - auth emulator support is not implemented
+- `cloud_functions_tizen`
+  - callable streaming is not implemented
+- `firebase_storage_tizen`
+  - storage emulator support is not implemented
+  - download tasks are implemented as one-shot writes
+- `firebase_database_tizen`
+  - `startAfter` and `endBefore` are approximated through existing query cursors
+
+## Future Candidates
+
+- Reasonable next candidates:
+  - Remote Config via REST-backed adapter
+  - Firestore through a separate pure Dart or REST-based design, if API parity scope is defined narrowly
+- Poor fits for now:
+  - Messaging
+  - Analytics
+  - Crashlytics
+  - Performance
+  - App Check
 
 ## License
 
-The licence is described separately in each package. [LICENSE](./LICENSE) contains all the licences for the entire repository.
+The licence is described separately in each package. [LICENSE](./LICENSE) contains the repository-wide license information.

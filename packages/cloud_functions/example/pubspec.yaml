@@ -2,20 +2,18 @@ name: cloud_functions_example
 description: A test app for cloud function plugin (e2e).
 
 environment:
-  sdk: ">=2.18.0 <4.0.0"
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0"
 
 dependencies:
-  cloud_functions: 4.0.7
+  cloud_functions: ^6.2.0
   cloud_functions_tizen:
     path: ..
-  firebase_core: ^2.17.0
-  firebase_core_tizen: ^1.0.1
-  flutter:
-    sdk: flutter
-
-dependency_overrides:
+  firebase_core: ^4.7.0
   firebase_core_tizen:
     path: ../../firebase_core
+  flutter:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -23,6 +21,10 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   integration_test_tizen: ^2.0.1
+
+dependency_overrides:
+  firebase_core_tizen:
+    path: ../../firebase_core
 
 flutter:
   uses-material-design: true
