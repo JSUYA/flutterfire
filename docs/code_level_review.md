@@ -128,37 +128,37 @@ Remaining behavioural caveat (documented):
 * Persistent-disk cache is intentionally disabled; see architecture
   doc on firebase_dart issue #63.
 
-### firebase_auth_tizen (9 H → 2 H remaining; 4 stubbed)
+### firebase_auth_tizen (9 H → 0 H)
 
-Commit: `467ed51`, `8812d70`. Version moved to `0.1.0-dev.1` so it
-cannot ship to pub.dev in its current state.
+Commits: `467ed51` (stubs), `8812d70` (`0.1.0-dev.1` safety pin),
+`940c813` / `f966f79` / `3252937` / `fa46f9f` (pigeon refactor + version
+restore). Version back to `0.1.0`.
 
 Fixed:
 * `updateProfile` return type widened to `Future<void>` per upstream
   8.1.9.
 * `setLanguageCode(null)` now short-circuits rather than passing null
   into fd's non-null signature.
-* `auth_error_mapper` gained the 2023+ Identity Toolkit codes (in an
-  earlier fix commit).
-* `ActionCodeInfo` data argument now `Map<String, dynamic>`.
-* Four APIs that relied on upstream types we have not yet wired up
-  (`getIdTokenResult`, `checkActionCode`, `_wrapCredential`, and
-  therefore every `signInWith*`) throw `UnimplementedError` with a
-  concrete reason instead of constructing the wrong thing.
+* `auth_error_mapper` gained the 2023+ Identity Toolkit codes.
+* `ActionCodeInfo` data argument shape matches upstream
+  (`ActionCodeInfoOperation` enum + `ActionCodeInfoData` object).
+* New `AuthPigeonMapper` builds `PigeonUserDetails`,
+  `PigeonIdTokenResult`, `AdditionalUserInfo`, and the action-code
+  wrapper from firebase_dart types. `UserCredentialTizen` subclasses
+  `UserCredentialPlatform` (which is abstract in 8.1.9). `UserTizen`
+  passes a real `PigeonUserDetails` into the positional 3-arg
+  `super(auth, multiFactor, details)`, unblocking `authStateChanges` /
+  `idTokenChanges` / `userChanges` stream emission.
+* `getIdTokenResult` builds `PigeonIdTokenResult` and constructs
+  `IdTokenResult(pigeon)` positional, matching the upstream wrapper.
+* `checkActionCode` delegates to fd and maps via
+  `AuthPigeonMapper.actionCodeInfoFromDart` — the typed `operation`
+  and `data` arguments upstream now demands.
 
-Remaining H (deferred to a pigeon-refactor follow-up):
-* `UserTizen` super passes `Map<String, Object?>` where upstream
-  `UserPlatform` now expects `PigeonUserDetails` (third positional
-  argument changed in 8.1.9). This prevents the package from
-  compiling cleanly today.
-* `authStateChanges` / `idTokenChanges` / `userChanges` emit
-  `UserTizen` instances, which cascade from the same super-call
-  issue.
-
-The pigeon refactor is tracked but not attempted in this pass — it
-needs a verified reading of the generated `PigeonUserDetails` /
-`PigeonUserCredential` / `PigeonIdTokenResult` shapes against the
-exact 8.1.9 release, which was not possible from this environment.
+Deliberate `implementation_imports` on
+`firebase_auth_platform_interface/src/pigeon/messages.pigeon.dart`
+(the only public path to those pigeon DTOs) is documented inline in
+`pigeon_mapper.dart` with an ignore directive.
 
 ## Package-level status summary
 
@@ -171,7 +171,7 @@ exact 8.1.9 release, which was not possible from this environment.
 | `firebase_storage_tizen` | **clean** | Biggest single refactor: driver + reference + ListResult + multipart. |
 | `cloud_functions_tizen` | **clean** | super + response parsing fixes applied. |
 | `firebase_database_tizen` | **expected clean** after this pass | Large refactor against fd.DataSnapshot's very narrow API; QueryModifier loop dispatches on modifier `name` which should match the platform interface's `toList()` schema. |
-| `firebase_auth_tizen` | **`0.1.0-dev.1` — still has 2 compile issues around the `UserPlatform` super positional arg (PigeonUserDetails type)** | All non-pigeon methods throw `UnimplementedError`; auth package cannot ship until pigeon-types are wired. |
+| `firebase_auth_tizen` | **clean (0.1.0)** | Pigeon refactor landed: AuthPigeonMapper builds PigeonUserDetails / PigeonIdTokenResult / AdditionalUserInfo / ActionCodeInfo from fd types. UserCredentialTizen subclasses the abstract UserCredentialPlatform. UserTizen now passes a proper PigeonUserDetails to super. |
 
 ## What the next iteration owes
 
