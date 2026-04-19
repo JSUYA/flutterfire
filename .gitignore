@@ -16,3 +16,8 @@ build/
 
 # Tools
 tools/**/*.jar
+
+# pubspec_overrides.yaml is per-developer local dev tooling
+# (path overrides for sibling packages). Keep it out of publish/commit.
+pubspec_overrides.yaml
+pubspec.lock
