@@ -25,8 +25,7 @@ class FirebaseRemoteConfigTizen extends FirebaseRemoteConfigPlatform {
   final Map<String, RemoteConfigValue> _parameters =
       <String, RemoteConfigValue>{};
   final Map<String, Object?> _defaults = <String, Object?>{};
-  final FirebaseInstallationsTizen _installations =
-      FirebaseInstallationsTizen();
+  FirebaseInstallationsTizen? _installationsCache;
   RemoteConfigSettings _settings = RemoteConfigSettings(
     fetchTimeout: const Duration(minutes: 1),
     minimumFetchInterval: const Duration(hours: 12),
@@ -43,6 +42,19 @@ class FirebaseRemoteConfigTizen extends FirebaseRemoteConfigPlatform {
       appId: appInstance?.options.appId ?? '',
     );
     return _client!;
+  }
+
+  FirebaseInstallationsTizen get _installations {
+    final FirebaseInstallationsTizen? cached = _installationsCache;
+    if (cached != null) {
+      return cached;
+    }
+    final FirebaseApp? app = appInstance;
+    final FirebaseInstallationsTizen resolved = app == null
+        ? FirebaseInstallationsTizen.internalForApp(Firebase.app())
+        : FirebaseInstallationsTizen.internalForApp(app);
+    _installationsCache = resolved;
+    return resolved;
   }
 
   @override
