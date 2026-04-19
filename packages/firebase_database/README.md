@@ -1,28 +1,14 @@
 # firebase_database_tizen
 
-The [Firebase Database for Flutter](https://pub.dev/packages/firebase_database) implementation for Tizen.
+[![pub package](https://img.shields.io/pub/v/firebase_database_tizen.svg)](https://pub.dev/packages/firebase_database_tizen)
 
-It offers experimental features for using Firebase on Flutter for Tizen. It works by wrapping cross-compiled libraries that are based on the [Firebase C++ SDK](https://github.com/firebase/firebase-cpp-sdk) for Linux.
+The Tizen implementation of
+[`firebase_database`](https://pub.dev/packages/firebase_database).
 
-# Usage
-
-To use this package, you need to include `firebase_database_tizen` as a dependency alongside `firebase_database` in your `pubspec.yaml`. Please note that `firebase_database_tizen` implementation is not officially endorsed for `firebase_database`.
-
-```yaml
-dependencies:
-  firebase_database: 10.0.9
-  firebase_database_tizen: ^0.1.0
-```
-
-Then you can import `firebase_database` in your Dart code:
-
-```dart
-import 'package:firebase_database/firebase_database.dart';
-```
+Non-endorsed federated plugin: add it alongside `firebase_database` and
+`firebase_core_tizen` in your app.
 
 ## Required privileges
-
-To use this plugin in a Tizen application, you may need to declare the following privileges in your `tizen-manifest.xml` file.
 
 ```xml
 <privileges>
@@ -30,15 +16,43 @@ To use this plugin in a Tizen application, you may need to declare the following
 </privileges>
 ```
 
-- `http://tizen.org/privilege/internet` allows the application to access the Internet.
+## Usage
 
-For the details on Tizen privileges, please see [Tizen Docs: API Privileges](https://docs.tizen.org/application/dotnet/get-started/api-privileges).
+```yaml
+dependencies:
+  firebase_core: ^4.7.0
+  firebase_core_tizen: ^2.0.0
+  firebase_database: ^12.3.0
+  firebase_database_tizen: ^0.2.0
+```
 
+```dart
+import 'package:firebase_database/firebase_database.dart';
 
-# Limitations
+final DatabaseReference ref =
+    FirebaseDatabase.instance.ref('players');
+await ref.push().set(<String, Object?>{
+  'name': 'tizen-demo',
+  'score': 0,
+});
+```
 
-The following features are currently unavailable as they're not supported by the version of Firebase C++ SDK for Linux that this plugin is currently based on.
+## Supported devices
 
-- Using Firebase Local Emulator Suite.
-- Using `FirebaseDatabase#setPersistenceCacheSizeBytes()` for the on-disk data.
-- Using `Query#startAfter()` or `Query#endBefore()` method to add a cursor to a query.
+| Tizen version | TV | TV emulator |
+|:-------------:|:--:|:-----------:|
+| 6.0 and above | ✔️  | ✔️           |
+
+## Limitations
+
+* `setPersistenceEnabled(true)` throws `UnimplementedError`. The cache is
+  memory-only; Firebase's disk persistence is intentionally disabled because
+  `firebase_dart` has an unresolved bug where the Hive box grows without
+  bound. Tizen storage budgets cannot absorb that.
+* `useDatabaseEmulator` throws `UnimplementedError` — the emulator relies
+  on loopback TLS that Tizen TV does not trust.
+* `purgeOutstandingWrites` and `goOnline`/`goOffline` delegate to
+  `firebase_dart` best-effort; they may be no-ops on cold start.
+* `startAfter` / `endBefore` cursor queries follow the `firebase_dart`
+  semantics, which do not always match the native SDK byte-for-byte at the
+  edges of mixed-type ranges.
