@@ -14,7 +14,7 @@ class OnDisconnectTizen extends OnDisconnectPlatform {
   OnDisconnectTizen(
     DatabaseReferencePlatform reference,
     this._reference,
-  ) : super(reference: reference);
+  ) : super(database: reference.database, ref: reference);
 
   final fd.DatabaseReference _reference;
 
@@ -25,7 +25,9 @@ class OnDisconnectTizen extends OnDisconnectPlatform {
 
   @override
   Future<void> setWithPriority(Object? value, Object? priority) {
-    return _reference.onDisconnect().setWithPriority(value, priority);
+    // firebase_dart's OnDisconnect has only set(value, {priority}); there
+    // is no separate setWithPriority method.
+    return _reference.onDisconnect().set(value, priority: priority);
   }
 
   @override
