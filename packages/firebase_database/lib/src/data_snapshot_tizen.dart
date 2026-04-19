@@ -10,6 +10,11 @@ import 'firebase_database_tizen_impl.dart';
 
 /// Tizen [DataSnapshotPlatform] implementation that wraps a
 /// `firebase_dart.DataSnapshot`.
+///
+/// `firebase_dart 1.6.2` exposes only `key` and `value` on its
+/// `DataSnapshot`; there is no `priority`, `exists`, `children`, `child`,
+/// or `ref`. We therefore derive the missing pieces from the carried
+/// value map and from the Tizen-side reference that created the snapshot.
 class DataSnapshotTizen extends DataSnapshotPlatform {
   /// Wraps [snapshot] belonging to [reference].
   DataSnapshotTizen(
@@ -18,6 +23,22 @@ class DataSnapshotTizen extends DataSnapshotPlatform {
     required DatabaseReferencePlatform reference,
   }) : super(reference, _snapshotToMap(_snapshot));
 
+  /// Constructs a standalone snapshot from a pre-resolved (key, value) pair
+  /// — used when deriving child snapshots from the parent's value map,
+  /// because `fd.DataSnapshot` does not expose `child()`.
+  DataSnapshotTizen.fromValue({
+    required FirebaseDatabaseTizen database,
+    required DatabaseReferencePlatform reference,
+    required String? key,
+    required Object? value,
+  })  : _database = database,
+        _snapshot = _LocalDataSnapshot(key, value),
+        super(reference, <String, Object?>{
+          'key': key,
+          'value': value,
+          'priority': null,
+        });
+
   final FirebaseDatabaseTizen _database;
   final fd.DataSnapshot _snapshot;
 
@@ -25,42 +46,78 @@ class DataSnapshotTizen extends DataSnapshotPlatform {
     return <String, Object?>{
       'key': snapshot.key,
       'value': snapshot.value,
-      'priority': snapshot.priority,
+      // firebase_dart does not expose priority on DataSnapshot.
+      'priority': null,
     };
   }
 
   @override
-  bool get exists => _snapshot.exists;
+  bool get exists => _snapshot.value != null;
 
   @override
   Object? get value => _snapshot.value;
 
   @override
-  Object? get priority => _snapshot.priority;
+  Object? get priority => null;
 
   @override
   Iterable<DataSnapshotPlatform> get children sync* {
-    for (final fd.DataSnapshot child in _snapshot.children) {
-      final DatabaseReferenceTizen childRef = DatabaseReferenceTizen(
-        _database,
-        _database.dartDatabase.reference().child(child.ref.path.toString()),
+    final Object? value = _snapshot.value;
+    if (value is! Map) {
+      return;
+    }
+    final DatabaseReferenceTizen parentRef = ref as DatabaseReferenceTizen;
+    for (final MapEntry<Object?, Object?> entry in value.entries) {
+      final String childKey = entry.key?.toString() ?? '';
+      yield DataSnapshotTizen.fromValue(
+        database: _database,
+        reference: DatabaseReferenceTizen(
+          _database,
+          parentRef.dartReference.child(childKey),
+        ),
+        key: childKey,
+        value: entry.value,
       );
-      yield DataSnapshotTizen(_database, child, reference: childRef);
     }
   }
 
   @override
-  bool hasChild(String path) {
-    return _snapshot.hasChild(path);
+  DataSnapshotPlatform child(String childPath) {
+    final DatabaseReferenceTizen parentRef = ref as DatabaseReferenceTizen;
+    final fd.DatabaseReference childDartRef =
+        parentRef.dartReference.child(childPath);
+    return DataSnapshotTizen.fromValue(
+      database: _database,
+      reference: DatabaseReferenceTizen(_database, childDartRef),
+      key: childPath.split('/').last,
+      value: _resolveChildValue(childPath),
+    );
   }
 
-  @override
-  DataSnapshotPlatform child(String childPath) {
-    final fd.DataSnapshot child = _snapshot.child(childPath);
-    final DatabaseReferenceTizen childRef = DatabaseReferenceTizen(
-      _database,
-      _database.dartDatabase.reference().child(child.ref.path.toString()),
-    );
-    return DataSnapshotTizen(_database, child, reference: childRef);
+  Object? _resolveChildValue(String path) {
+    Object? cursor = _snapshot.value;
+    for (final String segment in path.split('/')) {
+      if (segment.isEmpty) {
+        continue;
+      }
+      if (cursor is! Map) {
+        return null;
+      }
+      cursor = cursor[segment];
+    }
+    return cursor;
   }
+}
+
+/// Lightweight in-memory [fd.DataSnapshot] stand-in used by `child()` and
+/// `children` so we can carry a derived (key, value) pair without
+/// synthesising a real `DataSnapshot` subclass.
+class _LocalDataSnapshot implements fd.DataSnapshot {
+  _LocalDataSnapshot(this.key, this.value);
+
+  @override
+  final String? key;
+
+  @override
+  final dynamic value;
 }
