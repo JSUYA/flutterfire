@@ -11,14 +11,16 @@ void main() {
     test('resolves every documented identity-toolkit code', () {
       const Map<String, String> cases = <String, String>{
         'EMAIL_NOT_FOUND': 'user-not-found',
+        'EMAIL_EXISTS': 'email-already-in-use',
+        'EMAIL_ALREADY_IN_USE': 'email-already-in-use',
         'INVALID_PASSWORD': 'wrong-password',
+        'INVALID_LOGIN_CREDENTIALS': 'invalid-credential',
+        'INVALID_EMAIL': 'invalid-email',
         'USER_DISABLED': 'user-disabled',
         'USER_NOT_FOUND': 'user-not-found',
-        'EMAIL_EXISTS': 'email-already-in-use',
         'OPERATION_NOT_ALLOWED': 'operation-not-allowed',
         'TOO_MANY_ATTEMPTS_TRY_LATER': 'too-many-requests',
         'WEAK_PASSWORD': 'weak-password',
-        'INVALID_EMAIL': 'invalid-email',
         'MISSING_EMAIL': 'invalid-email',
         'INVALID_ID_TOKEN': 'user-token-expired',
         'TOKEN_EXPIRED': 'user-token-expired',
@@ -31,6 +33,14 @@ void main() {
         'INVALID_OOB_CODE': 'invalid-action-code',
         'INVALID_IDP_RESPONSE': 'invalid-credential',
         'FEDERATED_USER_ID_ALREADY_LINKED': 'credential-already-in-use',
+        'CAPTCHA_CHECK_FAILED': 'captcha-check-failed',
+        'RESET_PASSWORD_EXCEED_LIMIT': 'too-many-requests',
+        'QUOTA_EXCEEDED': 'quota-exceeded',
+        'APP_NOT_AUTHORIZED': 'app-not-authorized',
+        'ADMIN_ONLY_OPERATION': 'admin-restricted-operation',
+        'INVALID_PHONE_NUMBER': 'invalid-phone-number',
+        'MISSING_CODE': 'missing-verification-code',
+        'INVALID_CODE': 'invalid-verification-code',
       };
       cases.forEach((String raw, String expected) {
         expect(
