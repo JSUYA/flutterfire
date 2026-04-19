@@ -72,33 +72,29 @@ class RemoteConfigRestClient {
       'app_id': appId,
       'language_code': languageCode,
     };
-    try {
-      final http.Response response = await TizenHttpClient.instance.sendRaw(
-        method: 'POST',
-        url: _fetchUri(),
-        headers: headers,
-        body: jsonEncode(body),
-      );
-      if (response.statusCode == 304) {
-        return const RemoteConfigFetchResponse.notModified();
-      }
-      final Map<String, Object?> decoded =
-          jsonDecode(response.body) as Map<String, Object?>;
-      final Object? rawEntries = decoded['entries'];
-      final Map<String, Object?> entries = rawEntries is Map<String, Object?>
-          ? rawEntries
-          : <String, Object?>{};
-      final String? serverEtag = response.headers['etag'];
-      return RemoteConfigFetchResponse.updated(
-        entries: entries,
-        etag: serverEtag,
-      );
-    } on TizenFirebaseHttpException catch (error) {
-      if (error.statusCode == 304) {
-        return const RemoteConfigFetchResponse.notModified();
-      }
-      rethrow;
+    final http.Response response = await TizenHttpClient.instance.sendRaw(
+      method: 'POST',
+      url: _fetchUri(),
+      headers: headers,
+      // Whitelist 304 Not Modified so the client can inspect the body
+      // directly instead of relying on exception flow control.
+      body: jsonEncode(body),
+      allowStatuses: const <int>{304},
+    );
+    if (response.statusCode == 304) {
+      return const RemoteConfigFetchResponse.notModified();
     }
+    final Map<String, Object?> decoded =
+        jsonDecode(response.body) as Map<String, Object?>;
+    final Object? rawEntries = decoded['entries'];
+    final Map<String, Object?> entries = rawEntries is Map<String, Object?>
+        ? rawEntries
+        : <String, Object?>{};
+    final String? serverEtag = response.headers['etag'];
+    return RemoteConfigFetchResponse.updated(
+      entries: entries,
+      etag: serverEtag,
+    );
   }
 }
 
