@@ -80,20 +80,17 @@ class UserTizen extends UserPlatform {
 
   @override
   Future<IdTokenResult> getIdTokenResult([bool forceRefresh = false]) async {
-    final String token = await getIdToken(forceRefresh);
-    final fd.IdTokenResult result =
-        await _user.getIdTokenResult(forceRefresh);
-    return IdTokenResult(<String, Object?>{
-      'token': token,
-      'expirationTimestamp':
-          result.expirationTime.millisecondsSinceEpoch ~/ 1000,
-      'authTimestamp': result.authTime.millisecondsSinceEpoch ~/ 1000,
-      'issuedAtTimestamp':
-          result.issuedAtTime.millisecondsSinceEpoch ~/ 1000,
-      'signInProvider': result.signInProvider,
-      'signInSecondFactor': null,
-      'claims': result.claims,
-    });
+    // TODO(parity): rewrite against PigeonIdTokenResult once we verify
+    // its exact shape against firebase_auth_platform_interface 8.1.9.
+    // For now throw explicitly rather than construct an IdTokenResult
+    // with values that may not satisfy the upstream constructor.
+    throw UnimplementedError(
+      'getIdTokenResult is not yet supported by firebase_auth_tizen. '
+      'Reason: firebase_auth_platform_interface 8.1.9 changed IdTokenResult '
+      'to accept a PigeonIdTokenResult; the Tizen implementation needs to '
+      'build that object instead of a raw Map. Tracked as a known parity '
+      'gap — use getIdToken() for the bearer token.',
+    );
   }
 
   @override
@@ -137,14 +134,13 @@ class UserTizen extends UserPlatform {
   }
 
   @override
-  Future<UserPlatform> updateProfile(Map<String, String?> profile) async {
+  Future<void> updateProfile(Map<String, String?> profile) async {
     try {
       await _user.updateProfile(
         displayName: profile['displayName'],
         photoURL: profile['photoURL'],
       );
       await _user.reload();
-      return UserTizen(auth, multiFactor, _user);
     } catch (error, stack) {
       throw AuthErrorMapper.map(error, stack);
     }

@@ -218,18 +218,17 @@ class FirebaseAuthTizen extends FirebaseAuthPlatform {
 
   @override
   Future<ActionCodeInfo> checkActionCode(String code) async {
-    try {
-      final fd.ActionCodeInfo info = await _dartAuth.checkActionCode(code);
-      return ActionCodeInfo(
-        operation: info.operation.index,
-        data: <String, dynamic>{
-          'email': info.data.email,
-          'previousEmail': info.data.previousEmail,
-        },
-      );
-    } catch (error, stack) {
-      throw AuthErrorMapper.map(error, stack);
-    }
+    // TODO(parity): firebase_auth_platform_interface 8.1.9 changed
+    // ActionCodeInfo to take ActionCodeInfoOperation + ActionCodeInfoData
+    // typed objects. The firebase_dart ActionCodeInfo shape also drifted;
+    // rewrite this bridge against the pigeon-generated types once verified.
+    throw UnimplementedError(
+      'checkActionCode is not yet supported by firebase_auth_tizen. '
+      'Reason: upstream ActionCodeInfo now requires typed operation + data '
+      'objects that have not yet been wired up on the Tizen side. Use '
+      'applyActionCode / confirmPasswordReset / verifyPasswordResetCode '
+      'directly when handling OOB codes.',
+    );
   }
 
   @override
@@ -243,6 +242,11 @@ class FirebaseAuthTizen extends FirebaseAuthPlatform {
 
   @override
   Future<void> setLanguageCode(String? languageCode) async {
+    // firebase_dart's setLanguageCode requires a non-null String. Guard
+    // null so we don't crash on Dart's implicit cast.
+    if (languageCode == null) {
+      return;
+    }
     _dartAuth.setLanguageCode(languageCode);
   }
 
@@ -298,21 +302,17 @@ class FirebaseAuthTizen extends FirebaseAuthPlatform {
   }
 
   UserCredentialPlatform _wrapCredential(fd.UserCredential credential) {
-    final fd.User? user = credential.user;
-    final UserTizen? wrapped =
-        user == null ? null : UserTizen(this, MultiFactorTizen(this), user);
-    return UserCredentialPlatform(
-      auth: this,
-      additionalUserInfo: credential.additionalUserInfo == null
-          ? null
-          : AdditionalUserInfo(
-              isNewUser: credential.additionalUserInfo!.isNewUser,
-              providerId: credential.additionalUserInfo!.providerId,
-              profile: credential.additionalUserInfo!.profile,
-              username: credential.additionalUserInfo!.username,
-            ),
-      credential: null,
-      user: wrapped,
+    // TODO(parity): UserCredentialPlatform is an abstract class in
+    // firebase_auth_platform_interface 8.1.9 — we need a Tizen subclass
+    // that fills in the `user`/`additionalUserInfo`/`credential` fields
+    // through the pigeon-generated data types. For now surface the gap
+    // rather than silently instantiate an abstract class.
+    throw UnimplementedError(
+      'signInWith* credential wrapping is not yet supported by '
+      'firebase_auth_tizen. Reason: UserCredentialPlatform is abstract in '
+      'firebase_auth_platform_interface 8.1.9 and needs a Tizen subclass '
+      'built against the PigeonUserCredential/PigeonUserDetails types. '
+      'Tracked as a known parity gap.',
     );
   }
 }
