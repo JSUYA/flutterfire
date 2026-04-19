@@ -22,7 +22,10 @@ typedef TizenIdTokenProvider = Future<String?> Function({
 ///
 /// The token cache uses a [Lock] so that concurrent HTTP calls that all
 /// refresh on a 401 trigger exactly one upstream refresh (singleflight).
-@internal
+///
+/// This class is part of the *internal* Tizen-plugin surface (re-exported
+/// from `firebase_core_tizen` for sibling plugins); application code must
+/// continue to use `firebase_auth` for auth state.
 class TizenAuthContext {
   TizenAuthContext._();
 

@@ -21,7 +21,10 @@ import 'package:meta/meta.dart';
 /// The client is intentionally a singleton: keeping a single underlying
 /// [http.Client] reuses HTTP/2 connections, which matters for Storage/RC
 /// burst traffic on low-end TVs.
-@internal
+///
+/// This class is part of the *internal* Tizen-plugin surface
+/// (re-exported from `firebase_core_tizen`). Application code should use
+/// `package:http` directly for its own HTTP traffic.
 class TizenHttpClient {
   TizenHttpClient._();
 

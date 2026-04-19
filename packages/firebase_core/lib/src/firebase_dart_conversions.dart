@@ -4,7 +4,6 @@
 
 import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
 import 'package:firebase_dart/firebase_dart.dart' as fd;
-import 'package:meta/meta.dart';
 
 /// Converts between upstream `FirebaseOptions` and the `firebase_dart`
 /// equivalents.
@@ -13,7 +12,10 @@ import 'package:meta/meta.dart';
 /// `firebase_core`'s, so the conversions keep the optional fields intact and
 /// refuse to fabricate identifiers (e.g., never coerce a missing sender id
 /// into an empty string).
-@internal
+///
+/// Part of the *internal* Tizen-plugin surface (re-exported from
+/// `firebase_core_tizen`). Application code does not need these helpers
+/// directly — it uses `firebase_core`'s `FirebaseOptions`.
 class FirebaseDartOptionsConversions {
   /// Map a FlutterFire [FirebaseOptions] to its `firebase_dart` counterpart.
   static fd.FirebaseOptions toDart(FirebaseOptions options) {

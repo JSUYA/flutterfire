@@ -28,7 +28,11 @@ import 'firebase_dart_conversions.dart';
 /// Sibling Tizen plugins obtain Firebase apps through [registerApp] and
 /// [dartAppFor]; they never call `firebase_dart` directly so that the shared
 /// isolate, persistence path, and platform descriptor remain consistent.
-@internal
+///
+/// This class is part of the *internal* Tizen-plugin surface: application
+/// code must continue to use the `firebase_core` API. It is re-exported
+/// from `firebase_core_tizen` so sibling `*_tizen` packages can reach it
+/// without crossing `src/` boundaries.
 class FirebaseTizenRuntime {
   FirebaseTizenRuntime._();
 
