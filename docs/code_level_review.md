@@ -173,21 +173,60 @@ Deliberate `implementation_imports` on
 | `firebase_database_tizen` | **expected clean** after this pass | Large refactor against fd.DataSnapshot's very narrow API; QueryModifier loop dispatches on modifier `name` which should match the platform interface's `toList()` schema. |
 | `firebase_auth_tizen` | **clean (0.1.0)** | Pigeon refactor landed: AuthPigeonMapper builds PigeonUserDetails / PigeonIdTokenResult / AdditionalUserInfo / ActionCodeInfo from fd types. UserCredentialTizen subclasses the abstract UserCredentialPlatform. UserTizen now passes a proper PigeonUserDetails to super. |
 
-## What the next iteration owes
+## Third-pass source verification (done in this iteration)
 
-1. Verify `PigeonUserDetails` / `PigeonIdTokenResult` /
-   `PigeonUserCredential` shapes against
-   firebase_auth_platform_interface 8.1.9, refactor `UserTizen`,
-   `checkActionCode`, `getIdTokenResult`, and `_wrapCredential` to
-   use the typed objects. Flip `firebase_auth_tizen` back to `0.1.0`.
-2. Run `dart pub get` / `dart analyze` inside each package on a real
-   Linux (Docker) environment to confirm the fixes land — this
-   document trusts the verification-agent reads but has not itself
-   executed the toolchain.
-3. Confirm `QueryModifiers.toList()` serialised entries really do
-   carry `{'name': ..., 'path': ..., 'value': ...}` keys. If they use
-   different field names, the `switch (name)` dispatch needs adapting.
-4. Add fake-http-client driven unit tests that exercise the fixed
+Direct reads of the local pub-cache and upstream GitHub tags
+validated every remaining concern:
+
+* `firebase_auth_platform_interface/lib/src/user_info.dart` — confirmed
+  required fields in `UserInfo.fromJson`: `uid: String`,
+  `isAnonymous: bool`, `isEmailVerified: bool`, with `providerId`
+  optional and `photoUrl` (lowercase-l) as the map key. Our
+  `providerDataFromDart` mapper supplies every required field with a
+  non-null value.
+* `firebase_dart/lib/src/auth/user.dart` — confirmed fd.User exposes
+  `uid` (non-null String), `displayName`, `photoURL`, `email`,
+  `phoneNumber`, `isAnonymous`, `emailVerified`, `providerData`
+  (`List<UserInfo>`), `tenantId`, `refreshToken`, `metadata` with
+  `creationTime` / `lastSignInTime` as `DateTime?`. Every field the
+  pigeon mapper reads exists.
+* `firebase_dart/lib/src/auth/auth.dart` — confirmed
+  `FirebaseAuth.instanceFor({required FirebaseApp app})`,
+  `authStateChanges()` / `idTokenChanges()` / `userChanges()` returning
+  `Stream<User?>`, named-param `signInWithEmailAndPassword`,
+  named-param `sendPasswordResetEmail`, positional
+  `signInWithCustomToken` / `signInAnonymously` / `checkActionCode`,
+  `setLanguageCode(String language)` (non-null — our null guard
+  handles this), `languageCode` getter returning `String?`. No
+  signature drift.
+* `firebase_database_platform_interface/lib/src/query_modifiers.dart`
+  (both 0.2.6+15 local and 0.3.1+1 via raw.githubusercontent.com) —
+  confirmed the serialised map shapes:
+    - `OrderModifier`: `{'type':'orderBy','name':...,'path'?}`
+    - `_CursorModifier`: `{'type':'cursor','name':...,'value'?,'key'?}`
+    - `LimitModifier`: `{'type':'limit','name':...,'limit': int}`
+  The `limitToFirst` / `limitToLast` dispatch previously read
+  `modifier['value']` — fixed in commit `8e54ff0` to read the correct
+  `'limit'` key.
+* `firebase_dart/lib/src/database/query.dart` + `database.dart` —
+  confirmed `fd.Query.startAt(value, {key})`, `endAt(value, {key})`,
+  `equalTo(value, {key})`, `limitToFirst(int)`, `limitToLast(int)`,
+  `orderByChild(String)`, `orderByKey()/Value()/Priority()` and
+  `factory FirebaseDatabase({FirebaseApp? app, String? databaseURL})`.
+  Our call sites match.
+* `fd.Query.reference()` / `fd.DatabaseReference.path` (String
+  non-null getter) confirmed.
+
+## Still owed
+
+1. Run `dart pub get` / `dart analyze` / `flutter-tizen build tpk`
+   end-to-end on a real Linux (Docker) environment to confirm the
+   fixes land. This doc now trusts source-reading verification but
+   has not executed the toolchain.
+2. Add fake-http-client driven unit tests that exercise the fixed
    wire formats (Storage multipart / resumable, Callable `result` vs
    `data`, RC 304, SSE multi-line) so these regressions cannot return
    silently.
+3. Validate on a real TV emulator that the `firebase_dart` isolate
+   and `path_provider_tizen` persistence path work together under
+   the Tizen-native dispatch model.
