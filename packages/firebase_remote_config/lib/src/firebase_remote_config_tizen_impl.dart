@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_app_installations_tizen/firebase_app_installations_tizen.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -175,37 +176,38 @@ class FirebaseRemoteConfigTizen extends FirebaseRemoteConfigPlatform {
     );
   }
 
+  /// Converts an arbitrary value into the UTF-8 byte list that
+  /// RemoteConfigValue expects. String.codeUnits is UTF-16 and would
+  /// corrupt every non-ASCII value when the consumer calls asString().
+  List<int> _bytesOf(Object? value) {
+    if (value == null) {
+      return const <int>[];
+    }
+    if (value is List<int>) {
+      return value;
+    }
+    return utf8.encode(value.toString());
+  }
+
   RemoteConfigValue _valueFromMap(Map<String, Object?> json) {
-    final Object? value = json['value'];
     final Object? source = json['source'];
     final ValueSource src = switch (source) {
       'remote' => ValueSource.valueRemote,
       'default' => ValueSource.valueDefault,
       _ => ValueSource.valueStatic,
     };
-    if (value is List<int>) {
-      return RemoteConfigValue(value, src);
-    }
-    if (value is String) {
-      return RemoteConfigValue(value.codeUnits, src);
-    }
+    final Object? value = json['value'];
     if (value == null) {
       return RemoteConfigValue(null, src);
     }
-    return RemoteConfigValue(value.toString().codeUnits, src);
+    return RemoteConfigValue(_bytesOf(value), src);
   }
 
   RemoteConfigValue _valueFromString(Object? raw) {
-    if (raw is String) {
-      return RemoteConfigValue(raw.codeUnits, ValueSource.valueRemote);
-    }
-    if (raw is num || raw is bool) {
-      return RemoteConfigValue(raw.toString().codeUnits, ValueSource.valueRemote);
-    }
     if (raw == null) {
       return RemoteConfigValue(null, ValueSource.valueRemote);
     }
-    return RemoteConfigValue(raw.toString().codeUnits, ValueSource.valueRemote);
+    return RemoteConfigValue(_bytesOf(raw), ValueSource.valueRemote);
   }
 
   RemoteConfigValue _defaultsToValue(String key) {
@@ -213,12 +215,9 @@ class FirebaseRemoteConfigTizen extends FirebaseRemoteConfigPlatform {
       return RemoteConfigValue(null, ValueSource.valueStatic);
     }
     final Object? raw = _defaults[key];
-    if (raw is String) {
-      return RemoteConfigValue(raw.codeUnits, ValueSource.valueDefault);
-    }
     if (raw == null) {
       return RemoteConfigValue(null, ValueSource.valueDefault);
     }
-    return RemoteConfigValue(raw.toString().codeUnits, ValueSource.valueDefault);
+    return RemoteConfigValue(_bytesOf(raw), ValueSource.valueDefault);
   }
 }
