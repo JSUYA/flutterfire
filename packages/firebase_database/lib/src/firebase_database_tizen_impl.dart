@@ -33,7 +33,7 @@ class FirebaseDatabaseTizen extends DatabasePlatform {
 
   @override
   DatabasePlatform delegateFor({
-    FirebaseApp? app,
+    required FirebaseApp app,
     String? databaseURL,
   }) {
     return FirebaseDatabaseTizen._(app: app, databaseURL: databaseURL);
@@ -47,7 +47,9 @@ class FirebaseDatabaseTizen extends DatabasePlatform {
     return DatabaseReferenceTizen(this, reference);
   }
 
-  @override
+  /// refFromURL lives on the user-facing `FirebaseDatabase` API but is NOT
+  /// part of `DatabasePlatform 0.3.1+1`. Not annotated `@override` to keep
+  /// compilation against the real platform interface.
   DatabaseReferencePlatform refFromURL(String url) {
     // Firebase Realtime Database URLs look like
     //   https://<db>.firebaseio.com/path/to/node
@@ -102,7 +104,10 @@ class FirebaseDatabaseTizen extends DatabasePlatform {
 
   @override
   void setLoggingEnabled(bool enabled) {
-    fd.FirebaseDatabase.setLoggingEnabled(enabled);
+    // firebase_dart 1.6.2 does not expose a logging toggle on
+    // FirebaseDatabase (neither instance nor static). Treat as a
+    // documented no-op; callers that need logging can set their own
+    // logger on the firebase_dart runtime directly.
   }
 
   @override
