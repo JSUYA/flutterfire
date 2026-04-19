@@ -163,7 +163,8 @@ class DatabaseReferenceTizen extends QueryTizen
 
   @override
   DatabaseReferencePlatform? get parent {
-    final fd.DatabaseReference? parent = _reference.parent;
+    // fd.DatabaseReference.parent is a METHOD, not a getter.
+    final fd.DatabaseReference? parent = _reference.parent();
     if (parent == null) {
       return null;
     }
@@ -171,8 +172,9 @@ class DatabaseReferenceTizen extends QueryTizen
   }
 
   @override
-  DatabaseReferencePlatform get root =>
-      DatabaseReferenceTizen(_database, _reference.root);
+  DatabaseReferencePlatform root() =>
+      // fd.DatabaseReference.root and upstream root() are both methods.
+      DatabaseReferenceTizen(_database, _reference.root());
 
   @override
   OnDisconnectPlatform onDisconnect() {
@@ -189,7 +191,13 @@ class DatabaseReferenceTizen extends QueryTizen
 
   @override
   Future<void> setWithPriority(Object? value, Object? priority) =>
-      _reference.setWithPriority(value, priority);
+      // fd.DatabaseReference has no setWithPriority; set() takes an
+      // optional priority.
+      _reference.set(value, priority: priority);
+
+  @override
+  Future<void> setPriority(Object? priority) =>
+      _reference.setPriority(priority);
 
   @override
   Future<void> update(Map<String, Object?> value) => _reference.update(value);
@@ -209,19 +217,22 @@ class DatabaseReferenceTizen extends QueryTizen
         'transaction deltas locally before broadcasting the change.',
       );
     }
+    // firebase_dart's TransactionHandler returns FutureOr<MutableData?>:
+    //   return null           => abort
+    //   return mutated data   => commit
+    // fd.Transaction.abort / .success are NOT public factories in 1.6.2.
     final fd.TransactionResult result =
         await _reference.runTransaction((fd.MutableData data) {
       final Transaction tx = transactionHandler(data.value);
       if (tx.aborted) {
-        data.value = null;
-        return fd.Transaction.abort();
+        return null;
       }
       data.value = tx.value;
-      return fd.Transaction.success(data);
+      return data;
     });
-    return TransactionResultPlatform(
-      result.committed,
-      result.dataSnapshot == null
+    return _TizenTransactionResult(
+      committed: result.committed,
+      snapshot: result.dataSnapshot == null
           ? null
           : DataSnapshotTizen(
               _database,
@@ -229,5 +240,26 @@ class DatabaseReferenceTizen extends QueryTizen
               reference: this,
             ),
     );
+  }
+}
+
+/// Tizen [TransactionResultPlatform] holder — upstream's constructor only
+/// accepts a `committed` bool; the snapshot is an abstract getter that
+/// subclasses must provide.
+class _TizenTransactionResult extends TransactionResultPlatform {
+  _TizenTransactionResult({required bool committed, this._snapshot})
+      : super(committed);
+
+  final DataSnapshotPlatform? _snapshot;
+
+  @override
+  DataSnapshotPlatform get snapshot {
+    final DataSnapshotPlatform? snap = _snapshot;
+    if (snap == null) {
+      throw StateError(
+        'Transaction did not commit; snapshot is unavailable.',
+      );
+    }
+    return snap;
   }
 }
