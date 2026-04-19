@@ -49,7 +49,24 @@ class FirebaseDatabaseTizen extends DatabasePlatform {
 
   @override
   DatabaseReferencePlatform refFromURL(String url) {
-    return DatabaseReferenceTizen(this, dartDatabase.reference().child(url));
+    // Firebase Realtime Database URLs look like
+    //   https://<db>.firebaseio.com/path/to/node
+    // or
+    //   https://<db>.<region>.firebasedatabase.app/path/to/node
+    // Extract the path portion so the resulting reference points at the
+    // target node (not at '%2Fhttps%3A%2F%2F...').
+    final Uri parsed = Uri.parse(url);
+    final String path = parsed.path.startsWith('/')
+        ? parsed.path.substring(1)
+        : parsed.path;
+    final fd.FirebaseDatabase resolved = fd.FirebaseDatabase(
+      app: dartDatabase.app,
+      databaseURL: '${parsed.scheme}://${parsed.authority}',
+    );
+    final fd.DatabaseReference reference = path.isEmpty
+        ? resolved.reference()
+        : resolved.reference().child(path);
+    return DatabaseReferenceTizen(this, reference);
   }
 
   @override
