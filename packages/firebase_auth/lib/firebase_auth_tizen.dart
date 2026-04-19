@@ -11,4 +11,5 @@ library firebase_auth_tizen;
 
 export 'src/firebase_auth_tizen_impl.dart'
     show FirebaseAuthTizen, MultiFactorTizen;
+export 'src/user_credential_tizen.dart' show UserCredentialTizen;
 export 'src/user_tizen.dart' show UserTizen;

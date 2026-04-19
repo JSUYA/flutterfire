@@ -1,6 +1,6 @@
 name: firebase_auth_tizen
 description: Tizen implementation of the firebase_auth plugin, backed by the firebase_dart auth runtime shared with firebase_core_tizen.
-version: 0.1.0-dev.1
+version: 0.1.0
 homepage: https://github.com/flutter-tizen/flutterfire
 repository: https://github.com/flutter-tizen/flutterfire/tree/main/packages/firebase_auth
 
