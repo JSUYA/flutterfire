@@ -24,36 +24,12 @@ class ReferenceTizen extends ReferencePlatform {
         _client = storage.client,
         super(storage, fullPath);
 
-  /// Internal constructor used by [TaskTizen] when it does not yet know the
-  /// concrete reference (pre-bind).
-  ReferenceTizen.unassigned()
-      : _storage = null,
-        _client = null,
-        super.unassigned();
+  final FirebaseStorageTizen _storage;
+  final StorageRestClient _client;
 
-  final FirebaseStorageTizen? _storage;
-  final StorageRestClient? _client;
+  FirebaseStorageTizen get _requireStorage => _storage;
 
-  FirebaseStorageTizen get _requireStorage {
-    final FirebaseStorageTizen? storage = _storage;
-    if (storage == null) {
-      throw StateError(
-        'ReferenceTizen was used before it was bound to a FirebaseStorageTizen '
-        'instance.',
-      );
-    }
-    return storage;
-  }
-
-  StorageRestClient get _requireClient {
-    final StorageRestClient? client = _client;
-    if (client == null) {
-      throw StateError(
-        'ReferenceTizen was used before its REST client was assigned.',
-      );
-    }
-    return client;
-  }
+  StorageRestClient get _requireClient => _client;
 
   @override
   ReferencePlatform child(String path) {
