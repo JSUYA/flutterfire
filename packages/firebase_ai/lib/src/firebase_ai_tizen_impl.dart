@@ -11,10 +11,10 @@ import 'ai_rest_client.dart';
 
 /// Tizen entry point for `firebase_ai`.
 ///
-/// `firebase_ai` does not (yet) expose a MethodChannel-backed
-/// platform_interface in the same shape as the other plugins. The Tizen
-/// implementation therefore registers a `FirebaseAiBackend` accessor that
-/// Tizen consumers can call through a wrapper API:
+/// `firebase_ai` does not yet expose a federated platform interface, so the
+/// Tizen package deliberately avoids pretending to be an implementation of
+/// the upstream plugin. Instead it exposes a thin [FirebaseAiBackend]
+/// wrapper that Tizen apps call directly until upstream federation lands.
 ///
 /// ```dart
 /// final FirebaseAiBackend backend = FirebaseAiTizen.backend();
@@ -24,26 +24,43 @@ import 'ai_rest_client.dart';
 /// );
 /// ```
 ///
-/// Once `firebase_ai` ships a formal federated interface we switch to that
-/// without touching app code.
+/// [register] is intentionally a no-op: the flutter-tizen plugin tool may
+/// invoke it during `GeneratedPluginRegistrant.register()`, but no Firebase
+/// app exists yet at that point, so there is nothing to initialise. The
+/// backend is built lazily on the first call to [backend].
 class FirebaseAiTizen {
   FirebaseAiTizen._();
 
   /// Installed via `dartPluginClass: FirebaseAiTizen`.
+  ///
+  /// Must remain cheap and side-effect free — it runs before
+  /// `Firebase.initializeApp` completes, so the real backend construction
+  /// happens lazily in [backend].
   static void register() {
-    _backend = FirebaseAiBackend._fromAppName();
+    // Intentionally empty: no eager Firebase.app() lookup.
   }
 
   static FirebaseAiBackend? _backend;
 
-  /// Returns the registered backend, or constructs one lazily on first use.
+  /// Returns a Gemini/AI backend for the supplied [app] (or the default
+  /// Firebase app), constructing it lazily on first use. Safe to call once
+  /// `Firebase.initializeApp` has completed.
   static FirebaseAiBackend backend({FirebaseApp? app}) {
-    return _backend ??= FirebaseAiBackend._fromAppName(app: app);
+    final FirebaseAiBackend? cached = _backend;
+    if (cached != null && app == null) {
+      return cached;
+    }
+    final FirebaseApp resolved = app ?? Firebase.app();
+    final FirebaseAiBackend built = FirebaseAiBackend._fromApp(resolved);
+    if (app == null) {
+      _backend = built;
+    }
+    return built;
   }
 
   /// Test hook: swap the backing client.
   @visibleForTesting
-  static void debugSetBackend(FirebaseAiBackend backend) {
+  static void debugSetBackend(FirebaseAiBackend? backend) {
     _backend = backend;
   }
 }
@@ -53,13 +70,12 @@ class FirebaseAiBackend {
   /// Creates a backend using an explicit [client].
   FirebaseAiBackend({required AiRestClient client}) : _client = client;
 
-  /// Factory that builds a client from the default Firebase app's options.
-  factory FirebaseAiBackend._fromAppName({FirebaseApp? app}) {
-    final FirebaseApp resolved = app ?? Firebase.app();
+  /// Factory that builds a client from [app]'s options.
+  factory FirebaseAiBackend._fromApp(FirebaseApp app) {
     return FirebaseAiBackend(
       client: AiRestClient(
-        apiKey: resolved.options.apiKey,
-        appName: resolved.name,
+        apiKey: app.options.apiKey,
+        appName: app.name,
       ),
     );
   }
