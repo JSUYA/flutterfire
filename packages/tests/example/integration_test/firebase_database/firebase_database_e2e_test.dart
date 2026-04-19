@@ -7,7 +7,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:tests/firebase_options.dart';
+import 'package:flutterfire_tizen_tests_example/firebase_options.dart';
 
 import 'data_snapshot_e2e.dart';
 import 'database_e2e.dart';
