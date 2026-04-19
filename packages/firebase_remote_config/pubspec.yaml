@@ -1,0 +1,32 @@
+name: firebase_remote_config_tizen
+description: Tizen implementation of the firebase_remote_config plugin, backed by the Remote Config REST fetch endpoint with Installations-auth and ETag caching.
+version: 0.1.0
+homepage: https://github.com/flutter-tizen/flutterfire
+repository: https://github.com/flutter-tizen/flutterfire/tree/main/packages/firebase_remote_config
+
+environment:
+  flutter: '>=3.27.0'
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  firebase_app_installations_tizen: ^0.1.0
+  firebase_core: ^4.7.0
+  firebase_core_platform_interface: ^6.0.3
+  firebase_core_tizen: ^2.0.0
+  firebase_remote_config: ^6.4.0
+  firebase_remote_config_platform_interface: ^2.1.2
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  meta: ^1.10.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    implements: firebase_remote_config
+    platforms:
+      tizen:
+        dartPluginClass: FirebaseRemoteConfigTizen
