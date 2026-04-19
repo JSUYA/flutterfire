@@ -10,7 +10,8 @@ environment:
 dependencies:
   firebase_app_installations_tizen: ^0.1.0
   firebase_core: ^4.7.0
-  firebase_core_tizen: ^2.0.0
+  firebase_core_tizen:
+    path: ../../firebase_core
   firebase_remote_config: ^6.4.0
   firebase_remote_config_tizen:
     path: ..

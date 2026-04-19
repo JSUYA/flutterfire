@@ -9,7 +9,8 @@ environment:
 
 dependencies:
   firebase_core: ^4.7.0
-  firebase_core_tizen: ^2.0.0
+  firebase_core_tizen:
+    path: ../../firebase_core
   firebase_database: ^12.3.0
   firebase_database_tizen:
     path: ..
