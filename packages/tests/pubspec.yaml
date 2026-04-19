@@ -1,8 +1,8 @@
-# ignore_for_file sort_pub_dependencies
-name: flutterfire_test
-description: A an app for FlutterFire testing (e2e).
-publish_to: "none"
+name: flutterfire_tizen_tests
+description: Cross-plugin integration harness that mounts every Firebase Tizen plugin into a single TPK so we can measure real-world bundle size and validate shared-runtime behaviour.
+publish_to: 'none'
 version: 0.0.1
 
 environment:
-  sdk: ">=2.16.0 <3.0.0"
+  flutter: '>=3.27.0'
+  sdk: '>=3.6.0 <4.0.0'

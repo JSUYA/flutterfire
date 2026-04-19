@@ -1,33 +1,39 @@
-# ignore_for_file sort_pub_dependencies
-name: tests
-description: A an app for FlutterFire testing (e2e).
-publish_to: "none"
-version: 1.0.0+1
+name: flutterfire_tizen_tests_example
+description: End-to-end test harness exercising every firebase_*_tizen plugin together so we can confirm the shared-runtime design prevents TPK bloat.
+
+publish_to: 'none'
 
 environment:
-  sdk: ">=2.16.0 <3.0.0"
+  flutter: '>=3.27.0'
+  sdk: '>=3.6.0 <4.0.0'
 
 dependencies:
+  cloud_functions: ^6.2.0
   cloud_functions_tizen:
     path: ../../cloud_functions
+  firebase_ai: ^3.11.0
+  firebase_ai_tizen:
+    path: ../../firebase_ai
+  firebase_app_installations: ^0.4.2
+  firebase_app_installations_tizen:
+    path: ../../firebase_app_installations
+  firebase_auth: ^6.4.0
+  firebase_auth_tizen:
+    path: ../../firebase_auth
+  firebase_core: ^4.7.0
   firebase_core_tizen:
     path: ../../firebase_core
+  firebase_database: ^12.3.0
   firebase_database_tizen:
     path: ../../firebase_database
+  firebase_remote_config: ^6.4.0
+  firebase_remote_config_tizen:
+    path: ../../firebase_remote_config
+  firebase_storage: ^13.3.0
   firebase_storage_tizen:
     path: ../../firebase_storage
   flutter:
     sdk: flutter
-
-dependency_overrides:
-  cloud_functions_tizen:
-    path: ../../cloud_functions
-  firebase_core_tizen:
-    path: ../../firebase_core
-  firebase_database_tizen:
-    path: ../../firebase_database
-  firebase_storage_tizen:
-    path: ../../firebase_storage
 
 dev_dependencies:
   flutter_test:
