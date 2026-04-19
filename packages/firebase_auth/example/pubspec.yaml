@@ -1,0 +1,27 @@
+name: firebase_auth_tizen_example
+description: Demonstrates how to use the firebase_auth_tizen plugin.
+
+publish_to: 'none'
+
+environment:
+  flutter: '>=3.27.0'
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  firebase_auth: ^6.4.0
+  firebase_auth_tizen:
+    path: ../
+  firebase_core: ^4.7.0
+  firebase_core_tizen: ^2.0.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  integration_test_tizen: ^2.0.1
+
+flutter:
+  uses-material-design: true
