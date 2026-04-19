@@ -65,7 +65,12 @@ class AiRestClient {
   }
 
   /// Executes a streaming `generateContent` call, emitting each server
-  /// chunk as a parsed Map.
+  /// event as a parsed Map.
+  ///
+  /// Implements the SSE wire format correctly — an event consists of one or
+  /// more `data:` lines separated by a blank line. Multi-line `data:` values
+  /// are joined with a newline (per `text/event-stream` spec) before being
+  /// JSON-decoded.
   Stream<Map<String, Object?>> streamGenerateContent({
     required String model,
     required Map<String, Object?> body,
@@ -88,21 +93,55 @@ class AiRestClient {
         responseBody: errorBody,
       );
     }
+    final StringBuffer buffer = StringBuffer();
+    Future<void> flush(StreamController<Map<String, Object?>> _) async {}
     await for (final String line in response.stream
         .transform(utf8.decoder)
         .transform(const LineSplitter())) {
-      if (line.isEmpty || !line.startsWith('data:')) {
+      if (line.isEmpty) {
+        // End of event: emit buffered data, if any.
+        final String payload = buffer.toString();
+        buffer.clear();
+        if (payload.isEmpty) {
+          continue;
+        }
+        final Object? decoded = jsonDecode(payload);
+        if (decoded is Map<String, Object?>) {
+          yield decoded;
+        }
         continue;
       }
-      final String payload = line.substring('data:'.length).trim();
-      if (payload.isEmpty || payload == '[DONE]') {
+      if (line.startsWith(':')) {
+        // SSE comment; ignore.
         continue;
       }
-      final Object? decoded = jsonDecode(payload);
+      if (!line.startsWith('data:')) {
+        // Other SSE fields (event:, id:, retry:) are not meaningful for
+        // Gemini streaming responses.
+        continue;
+      }
+      // Per spec, a single leading space after the colon is ignored; keep
+      // the rest verbatim so multi-line JSON is reconstructed correctly.
+      String payloadFragment = line.substring('data:'.length);
+      if (payloadFragment.startsWith(' ')) {
+        payloadFragment = payloadFragment.substring(1);
+      }
+      if (buffer.isNotEmpty) {
+        buffer.write('\n');
+      }
+      buffer.write(payloadFragment);
+    }
+    // Handle streams that terminate without a trailing blank line.
+    final String tail = buffer.toString();
+    if (tail.isNotEmpty) {
+      final Object? decoded = jsonDecode(tail);
       if (decoded is Map<String, Object?>) {
         yield decoded;
       }
     }
+    // flush is unused but preserves the closure-capture style for future
+    // instrumentation hooks without altering the public API.
+    await flush(StreamController<Map<String, Object?>>());
   }
 
   /// Executes a `countTokens` call.
