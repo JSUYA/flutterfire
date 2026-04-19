@@ -1,31 +1,61 @@
 # cloud_functions_tizen
 
-The [Firebase Cloud Functions for Flutter](https://pub.dev/packages/cloud_functions) implementation for Tizen.
+[![pub package](https://img.shields.io/pub/v/cloud_functions_tizen.svg)](https://pub.dev/packages/cloud_functions_tizen)
 
-It offers experimental features for using Firebase on Flutter for Tizen. It works by wrapping cross-compiled libraries that are based on the [Firebase C++ SDK](https://github.com/firebase/firebase-cpp-sdk) for Linux.
+The Tizen implementation of
+[`cloud_functions`](https://pub.dev/packages/cloud_functions).
 
-# Usage
+Non-endorsed federated plugin — add it alongside `cloud_functions` and
+`firebase_core_tizen`. For authenticated calls, also add
+`firebase_auth_tizen`: the Tizen Auth Context brokers the ID token used on
+every callable request.
 
-To use this package, you need to include `cloud_functions_tizen` as a dependency alongside `cloud_functions` in your `pubspec.yaml`. Please note that `cloud_functions_tizen` implementation is not officially endorsed for `cloud_functions`.
+## Required privileges
+
+```xml
+<privileges>
+  <privilege>http://tizen.org/privilege/internet</privilege>
+</privileges>
+```
+
+## Usage
 
 ```yaml
 dependencies:
-  cloud_functions: 4.0.7
-  cloud_functions_tizen: ^0.1.0
+  cloud_functions: ^6.2.0
+  cloud_functions_tizen: ^0.2.0
+  firebase_core: ^4.7.0
+  firebase_core_tizen: ^2.0.0
 ```
-
-Then you can import `cloud_functions` in your Dart code:
 
 ```dart
-import 'package:cloud_functions/cloud_functions.dart';
+// Gen1 callable (default name-based endpoint).
+final HttpsCallable fn = FirebaseFunctions.instance.httpsCallable('addTwo');
+final HttpsCallableResult<dynamic> result = await fn(<String, int>{
+  'a': 1,
+  'b': 2,
+});
+print(result.data);
+
+// Gen2 callable (direct URL).
+final HttpsCallable gen2 = FirebaseFunctions.instance.httpsCallableFromUrl(
+  'https://addtwo-abc123-uc.a.run.app',
+);
 ```
 
-# Limitations
+## Supported devices
 
-The following features are currently unavailable as they're not supported by the version of Firebase C++ SDK for Linux that this plugin is currently based on.
+| Tizen version | TV | TV emulator |
+|:-------------:|:--:|:-----------:|
+| 6.0 and above | ✔️  | ✔️           |
 
-- Using `HttpsCallableOptions#timeout` for an HttpsCallable instance's options.
+## Limitations
 
-# Known bugs
-
-- The code and details of `FirebaseFunctionsException` aren't properly provided.
+* **Streaming callables** (`HttpsCallable.stream`) throw `UnimplementedError`.
+  The wire format is still evolving and we will add support once stable.
+* **Emulator origin override** throws `UnimplementedError` — the emulator
+  relies on loopback TLS that Tizen TV devices do not trust.
+* **App Check tokens** are not attached — Tizen has no Play Integrity /
+  DeviceCheck / reCAPTCHA provider; enable App Check custom-provider
+  enforcement in your Functions only if your backend accepts
+  server-minted custom tokens.
