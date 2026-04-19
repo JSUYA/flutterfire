@@ -1,27 +1,25 @@
 name: cloud_functions_tizen
-description: The Firebase Cloud Functions implementation for Tizen.
-version: 0.1.0
-homepage:
-repository:
-publish_to: "none"
+description: Tizen implementation of the cloud_functions plugin — a direct HTTPS callable client so the other Firebase Tizen plugins share its auth token plumbing.
+version: 0.2.0
+homepage: https://github.com/flutter-tizen/flutterfire
+repository: https://github.com/flutter-tizen/flutterfire/tree/main/packages/cloud_functions
 
 environment:
-  sdk: ">=2.18.0 <4.0.0"
-  flutter: ">=3.3.0"
+  flutter: '>=3.27.0'
+  sdk: '>=3.6.0 <4.0.0'
 
 dependencies:
-  cloud_functions: 4.0.7
-  cloud_functions_platform_interface: 5.1.26
-  firebase_core_tizen: ^1.0.1
+  cloud_functions: ^6.2.0
+  cloud_functions_platform_interface: ^5.8.12
+  firebase_core: ^4.7.0
+  firebase_core_platform_interface: ^6.0.3
+  firebase_core_tizen: ^2.0.0
   flutter:
     sdk: flutter
-
-dependency_overrides:
-  firebase_core_tizen:
-    path: ../firebase_core
+  http: ^1.1.0
+  meta: ^1.10.0
 
 dev_dependencies:
-  flutter_lints: ^2.0.0
   flutter_test:
     sdk: flutter
 
@@ -30,5 +28,4 @@ flutter:
     implements: cloud_functions
     platforms:
       tizen:
-        pluginClass: CloudFunctionsPlugin
-        fileName: cloud_functions_plugin.h
+        dartPluginClass: CloudFunctionsTizen
