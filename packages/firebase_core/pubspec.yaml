@@ -18,6 +18,10 @@ dependencies:
   meta: ^1.10.0
   path: ^1.9.0
   path_provider: ^2.1.0
+  # path_provider's Tizen federation is non-endorsed, so we pin it
+  # explicitly. Without this dep, getApplicationSupportDirectory throws
+  # MissingPluginException on Tizen TV at FirebaseDart.setup time.
+  path_provider_tizen: ^2.2.1
   synchronized: ^3.1.0
 
 dev_dependencies:
