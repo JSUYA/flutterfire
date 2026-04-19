@@ -55,23 +55,46 @@ class CallableRestClient {
     final Map<String, Object?> body = <String, Object?>{
       'data': codec.encode(parameters),
     };
-    final Map<String, Object?> response =
-        await TizenHttpClient.instance.sendJson(
-      method: 'POST',
-      url: target,
-      headers: <String, String>{
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: body,
-      timeout: timeout,
-    );
+    final Map<String, Object?> response;
+    try {
+      response = await TizenHttpClient.instance.sendJson(
+        method: 'POST',
+        url: target,
+        headers: <String, String>{
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: body,
+        timeout: timeout,
+      );
+    } on TizenFirebaseHttpException catch (error) {
+      // Preserve the server-supplied `details` payload by routing through
+      // the Functions mapper — sendJson's generic exception loses it.
+      Map<String, Object?>? payload;
+      try {
+        final Object? decoded = jsonDecode(error.responseBody);
+        if (decoded is Map<String, Object?>) {
+          payload = decoded;
+        }
+      } on FormatException {
+        payload = null;
+      }
+      throw FunctionsErrorMapper.map(
+        statusCode: error.statusCode,
+        payload: payload,
+      );
+    }
     if (response.containsKey('error')) {
       throw FunctionsErrorMapper.map(
-        statusCode: 400,
+        statusCode: 200,
         payload: response,
       );
     }
-    return codec.decode(response['data'] ?? response['result']);
+    // The Firebase callable wire format returns {"result": ...}. Older
+    // documentation sometimes shows {"data": ...}; fall back to that only
+    // if 'result' is absent so we stay compatible with both.
+    return codec.decode(response.containsKey('result')
+        ? response['result']
+        : response['data']);
   }
 }
 
@@ -82,7 +105,10 @@ class CallableCodec {
 
   /// Encodes Dart values into the JSON envelope expected by the server.
   Object? encode(Object? value) {
-    if (value is int && (value > _safeMax || value < -_safeMax)) {
+    // Boundary is >= 2^53 (not > 2^53): JavaScript's Number.MAX_SAFE_INTEGER
+    // is 2^53 - 1, so 2^53 itself cannot survive an un-wrapped round trip.
+    if (value is int &&
+        (value >= _safeMax || value <= -_safeMax)) {
       return <String, Object?>{
         '@type': 'type.googleapis.com/google.protobuf.Int64Value',
         'value': value.toString(),
