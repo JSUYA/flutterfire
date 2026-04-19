@@ -8,50 +8,26 @@ import 'package:firebase_auth_platform_interface/firebase_auth_platform_interfac
 import 'package:firebase_dart/firebase_dart.dart' as fd;
 
 import 'auth_error_mapper.dart';
+import 'pigeon_mapper.dart';
 
 /// Tizen implementation of [UserPlatform].
 ///
-/// Wraps a `firebase_dart.User` but never logs the token or stringifies it —
-/// `toString` deliberately redacts every credential field that could leak
-/// authentication material into a device log.
+/// Wraps a `firebase_dart.User` and surfaces the snapshot through the
+/// pigeon-generated `PigeonUserDetails` type the upstream platform
+/// interface requires. `toString` deliberately omits the refresh token so
+/// debug logs cannot leak auth material.
 class UserTizen extends UserPlatform {
   /// Creates a delegate for [user] inside [auth].
-  UserTizen(FirebaseAuthPlatform auth, MultiFactorPlatform multiFactor,
-      this._user)
-      : super(auth, multiFactor, _snapshotFromUser(_user));
+  UserTizen(
+    FirebaseAuthPlatform auth,
+    MultiFactorPlatform multiFactor,
+    this._user,
+  ) : super(auth, multiFactor, AuthPigeonMapper.detailsFromDart(_user));
 
   final fd.User _user;
 
   /// Convenience accessor for the wrapped firebase_dart user.
   fd.User get dartUser => _user;
-
-  static Map<String, Object?> _snapshotFromUser(fd.User user) {
-    return <String, Object?>{
-      'uid': user.uid,
-      'email': user.email,
-      'emailVerified': user.emailVerified,
-      'isAnonymous': user.isAnonymous,
-      'displayName': user.displayName,
-      'photoURL': user.photoURL,
-      'phoneNumber': user.phoneNumber,
-      'refreshToken': null, // Intentionally omitted.
-      'tenantId': user.tenantId,
-      'providerData': user.providerData
-          .map((fd.UserInfo info) => <String, Object?>{
-                'uid': info.uid,
-                'providerId': info.providerId,
-                'displayName': info.displayName,
-                'email': info.email,
-                'photoURL': info.photoURL,
-                'phoneNumber': info.phoneNumber,
-              })
-          .toList(growable: false),
-      'metadata': <String, Object?>{
-        'creationTime': user.metadata.creationTime?.millisecondsSinceEpoch,
-        'lastSignInTime': user.metadata.lastSignInTime?.millisecondsSinceEpoch,
-      },
-    };
-  }
 
   @override
   Future<void> delete() async {
@@ -80,17 +56,16 @@ class UserTizen extends UserPlatform {
 
   @override
   Future<IdTokenResult> getIdTokenResult([bool forceRefresh = false]) async {
-    // TODO(parity): rewrite against PigeonIdTokenResult once we verify
-    // its exact shape against firebase_auth_platform_interface 8.1.9.
-    // For now throw explicitly rather than construct an IdTokenResult
-    // with values that may not satisfy the upstream constructor.
-    throw UnimplementedError(
-      'getIdTokenResult is not yet supported by firebase_auth_tizen. '
-      'Reason: firebase_auth_platform_interface 8.1.9 changed IdTokenResult '
-      'to accept a PigeonIdTokenResult; the Tizen implementation needs to '
-      'build that object instead of a raw Map. Tracked as a known parity '
-      'gap — use getIdToken() for the bearer token.',
-    );
+    try {
+      final String token = await getIdToken(forceRefresh);
+      final fd.IdTokenResult result =
+          await _user.getIdTokenResult(forceRefresh);
+      return IdTokenResult(
+        AuthPigeonMapper.idTokenResultFromDart(result, token),
+      );
+    } catch (error, stack) {
+      throw AuthErrorMapper.map(error, stack);
+    }
   }
 
   @override
