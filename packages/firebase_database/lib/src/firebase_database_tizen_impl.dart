@@ -32,7 +32,7 @@ class FirebaseDatabaseTizen extends DatabasePlatform {
   }
 
   @override
-  FirebaseDatabasePlatform delegateFor({
+  DatabasePlatform delegateFor({
     FirebaseApp? app,
     String? databaseURL,
   }) {

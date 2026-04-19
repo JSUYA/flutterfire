@@ -22,7 +22,7 @@ class QueryTizen extends QueryPlatform {
   final fd.Query _query;
 
   @override
-  FirebaseDatabasePlatform get database => _database;
+  DatabasePlatform get database => _database;
 
   @override
   String get path => _query.path.toString();
