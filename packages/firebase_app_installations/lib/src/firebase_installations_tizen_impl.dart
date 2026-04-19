@@ -12,25 +12,26 @@ import 'package:synchronized/synchronized.dart';
 import 'fid_generator.dart';
 import 'installations_rest_client.dart';
 
-/// Tizen implementation of [FirebaseInstallationsPlatform].
-class FirebaseInstallationsTizen extends FirebaseInstallationsPlatform {
+/// Tizen implementation of [FirebaseAppInstallationsPlatform].
+///
+/// The upstream abstract class is named `FirebaseAppInstallationsPlatform`
+/// (with the `App` prefix); the app-facing `FirebaseInstallations` class in
+/// the `firebase_app_installations` package drops the prefix, but the
+/// platform interface does not.
+class FirebaseInstallationsTizen extends FirebaseAppInstallationsPlatform {
   /// Private constructor; app code goes through the standard
   /// `FirebaseInstallations.instance` getter.
-  FirebaseInstallationsTizen._({FirebaseApp? app}) : super(appInstance: app);
+  FirebaseInstallationsTizen._({FirebaseApp? app}) : super(app);
 
   /// Entry point registered via
   /// `dartPluginClass: FirebaseInstallationsTizen`.
   static void register() {
-    FirebaseInstallationsPlatform.instance = FirebaseInstallationsTizen._();
+    FirebaseAppInstallationsPlatform.instance = FirebaseInstallationsTizen._();
   }
 
   /// Internal factory exposed to sibling Tizen plugins (e.g. Remote Config)
   /// that need an installations delegate before `FirebaseInstallations`
   /// app-facing code has been instantiated.
-  ///
-  /// Prefer `FirebaseInstallationsPlatform.instance.delegateFor(app: app)`
-  /// when possible; this factory exists for cases where the shared runtime
-  /// must be accessed without routing through the upstream plugin.
   @internal
   static FirebaseInstallationsTizen internalForApp(FirebaseApp app) {
     return FirebaseInstallationsTizen._(app: app);
@@ -46,21 +47,16 @@ class FirebaseInstallationsTizen extends FirebaseInstallationsPlatform {
 
   InstallationsRestClient get _client {
     _clientCache ??= InstallationsRestClient(
-      apiKey: appInstance?.options.apiKey ?? '',
-      projectId: appInstance?.options.projectId ?? '',
-      appId: appInstance?.options.appId ?? '',
+      apiKey: app?.options.apiKey ?? '',
+      projectId: app?.options.projectId ?? '',
+      appId: app?.options.appId ?? '',
     );
     return _clientCache!;
   }
 
   @override
-  FirebaseInstallationsPlatform delegateFor({required FirebaseApp app}) {
+  FirebaseAppInstallationsPlatform delegateFor({required FirebaseApp app}) {
     return FirebaseInstallationsTizen._(app: app);
-  }
-
-  @override
-  FirebaseInstallationsPlatform setInitialValues() {
-    return this;
   }
 
   @override
@@ -99,7 +95,7 @@ class FirebaseInstallationsTizen extends FirebaseInstallationsPlatform {
   }
 
   @override
-  Future<String> getToken([bool forceRefresh = false]) async {
+  Future<String> getToken(bool forceRefresh) async {
     return _lock.synchronized<String>(() async {
       if (!forceRefresh) {
         final InstallationsAuthToken? cached = _token;
