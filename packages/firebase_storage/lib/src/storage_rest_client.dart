@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:firebase_core_tizen/firebase_core_tizen.dart';
 import 'package:http/http.dart' as http;
@@ -209,22 +210,34 @@ class StorageRestClient {
     required List<int> data,
     Map<String, Object?>? metadata,
   }) async {
-    final String boundary =
-        'tizen-boundary-${DateTime.now().microsecondsSinceEpoch}';
-    final Map<String, Object?> meta =
-        <String, Object?>{'name': path, ...?metadata};
+    // Unpredictable boundary: 24 random bytes hex-encoded. Picking a
+    // boundary based on DateTime would allow adversarial callers to
+    // fabricate a matching byte sequence inside their payload.
+    final String boundary = _generateBoundary();
+
+    // metadata['contentType'] is metadata-side truth; do NOT also
+    // duplicate it on the body part header (Firebase rejects the
+    // conflict).
+    final Map<String, Object?> meta = <String, Object?>{
+      'name': path,
+      if (metadata != null) ...metadata,
+    };
+    final String? bodyContentType = metadata?['contentType'] as String?;
     final List<int> body = <int>[
       ...utf8.encode('--$boundary\r\n'
           'Content-Type: application/json; charset=UTF-8\r\n\r\n'
           '${jsonEncode(meta)}\r\n'
           '--$boundary\r\n'
-          'Content-Type: ${metadata?['contentType'] ?? 'application/octet-stream'}\r\n\r\n'),
+          'Content-Type: ${bodyContentType ?? 'application/octet-stream'}\r\n\r\n'),
       ...data,
-      ...utf8.encode('\r\n--$boundary--'),
+      ...utf8.encode('\r\n--$boundary--\r\n'),
     ];
 
     try {
-      return await TizenHttpClient.instance.sendJson(
+      // Must go through sendRaw: sendJson would overwrite the
+      // multipart Content-Type header and jsonEncode the bytes.
+      final http.Response response =
+          await TizenHttpClient.instance.sendRaw(
         method: 'POST',
         url: _uploadUri(path, uploadType: 'multipart'),
         headers: await _authHeaders(
@@ -234,9 +247,27 @@ class StorageRestClient {
         ),
         body: body,
       );
+      if (response.body.isEmpty) {
+        return <String, Object?>{};
+      }
+      final Object? decoded = jsonDecode(response.body);
+      if (decoded is Map<String, Object?>) {
+        return decoded;
+      }
+      throw StorageErrorMapper.map(
+        response.statusCode,
+        message: 'Unexpected non-JSON response to multipart upload.',
+      );
     } on TizenFirebaseHttpException catch (e) {
       throw StorageErrorMapper.fromHttpException(e);
     }
+  }
+
+  String _generateBoundary() {
+    final Random rand = Random.secure();
+    final List<int> bytes =
+        List<int>.generate(24, (_) => rand.nextInt(256));
+    return 'tizen-${bytes.map((int b) => b.toRadixString(16).padLeft(2, '0')).join()}';
   }
 
   /// Starts a resumable upload session and returns the session URI to `PUT`
