@@ -311,8 +311,12 @@ class StorageRestClient {
   }
 
   /// Uploads [chunk] of the resumable session, returning the server's final
-  /// metadata when the transfer is complete (status 200), or `null` while
-  /// more chunks are still needed.
+  /// metadata when the transfer is complete (status 200/201), or `null`
+  /// while more chunks are still needed.
+  ///
+  /// GCS returns HTTP 308 "Resume Incomplete" after a non-final chunk; that
+  /// is whitelisted via [TizenHttpClient.sendRaw.allowStatuses] so the
+  /// client does not treat it as an error.
   Future<Map<String, Object?>?> uploadChunk({
     required Uri sessionUri,
     required List<int> chunk,
@@ -328,12 +332,20 @@ class StorageRestClient {
           'X-Goog-Upload-Command':
               isFinal ? 'upload, finalize' : 'upload',
           'X-Goog-Upload-Offset': '$byteOffset',
-          'Content-Length': '${chunk.length}',
         },
         body: chunk,
+        allowStatuses: const <int>{308},
       );
-      if (response.statusCode == 200 && response.body.isNotEmpty) {
-        return jsonDecode(response.body) as Map<String, Object?>;
+      final String? uploadStatus =
+          response.headers['x-goog-upload-status']?.toLowerCase();
+      final bool completed = response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          uploadStatus == 'final';
+      if (completed && response.body.isNotEmpty) {
+        final Object? decoded = jsonDecode(response.body);
+        if (decoded is Map<String, Object?>) {
+          return decoded;
+        }
       }
       return null;
     } on TizenFirebaseHttpException catch (e) {

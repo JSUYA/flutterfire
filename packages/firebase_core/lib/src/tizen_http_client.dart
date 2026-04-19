@@ -72,13 +72,20 @@ class TizenHttpClient {
   }
 
   /// Issues a raw HTTP request, throwing [TizenFirebaseHttpException] for
-  /// non-2xx responses.
+  /// non-2xx responses unless the status is listed in [allowStatuses].
+  ///
+  /// [allowStatuses] lets callers opt in to specific non-2xx codes that the
+  /// Firebase protocol uses intentionally — for example, the Storage
+  /// resumable upload protocol returns `308 Resume Incomplete` between
+  /// chunks, and Remote Config returns `304 Not Modified` when the
+  /// cached payload is current.
   Future<http.Response> sendRaw({
     required String method,
     required Uri url,
     Map<String, String>? headers,
     Object? body,
     Duration timeout = const Duration(seconds: 30),
+    Set<int> allowStatuses = const <int>{},
   }) async {
     final http.Request request = http.Request(method, url);
     if (headers != null) {
@@ -101,6 +108,9 @@ class TizenHttpClient {
         await _delegate.send(request).timeout(timeout);
     final http.Response response = await http.Response.fromStream(streamed);
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response;
+    }
+    if (allowStatuses.contains(response.statusCode)) {
       return response;
     }
     throw TizenFirebaseHttpException.fromResponse(response);
