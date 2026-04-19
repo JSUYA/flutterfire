@@ -1,0 +1,24 @@
+name: firebase_app_installations_tizen_example
+description: Demonstrates how to use the firebase_app_installations_tizen plugin.
+
+publish_to: 'none'
+
+environment:
+  flutter: '>=3.27.0'
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  firebase_app_installations: ^0.4.2
+  firebase_app_installations_tizen:
+    path: ..
+  firebase_core: ^4.7.0
+  firebase_core_tizen: ^2.0.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
