@@ -1,5 +1,5 @@
 name: firebase_ai_tizen
-description: Tizen implementation of the firebase_ai plugin, a pure Dart HTTPS client for Gemini models via Firebase AI Logic.
+description: Tizen-friendly helper around the upstream firebase_ai plugin — a pure Dart HTTPS wrapper for the Gemini generative language API.
 version: 0.1.0
 homepage: https://github.com/flutter-tizen/flutterfire
 repository: https://github.com/flutter-tizen/flutterfire/tree/main/packages/firebase_ai
@@ -9,7 +9,6 @@ environment:
   sdk: '>=3.6.0 <4.0.0'
 
 dependencies:
-  firebase_ai: ^3.11.0
   firebase_core: ^4.7.0
   firebase_core_platform_interface: ^6.0.3
   firebase_core_tizen: ^2.0.0
@@ -22,9 +21,13 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+# NOTE: The upstream `firebase_ai` package has no federated
+# platform_interface yet, so we do not declare `implements:` here.
+# Apps depend on `firebase_ai_tizen` directly and call
+# `FirebaseAiTizen.backend()` for Tizen-specific use; when firebase_ai
+# adds a federated interface we revisit this declaration.
 flutter:
   plugin:
-    implements: firebase_ai
     platforms:
       tizen:
         dartPluginClass: FirebaseAiTizen

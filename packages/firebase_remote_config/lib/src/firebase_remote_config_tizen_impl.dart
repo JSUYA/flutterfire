@@ -158,10 +158,12 @@ class FirebaseRemoteConfigTizen extends FirebaseRemoteConfigPlatform {
   }
 
   @override
-  Future<void> setDefaults(Map<String, Object?> defaults) async {
+  Future<void> setDefaults(Map<String, dynamic> defaults) async {
     _defaults
       ..clear()
-      ..addAll(defaults);
+      // Cast to the internal map type; Map<String, dynamic> values are
+      // already safe at runtime, the cast just re-types the entries.
+      ..addAll(defaults.cast<String, Object?>());
   }
 
   @override
