@@ -347,9 +347,9 @@ class _DownloadDriver extends _TaskDriver {
 
   @override
   Future<void> _run() async {
+    int bytes = 0;
     try {
-      final int bytes = await client.download(path, sink);
-      await sink.close();
+      bytes = await client.download(path, sink);
       _snapshot = TaskSnapshotTizen(
         bytesTransferred: bytes,
         totalBytes: bytes,
@@ -359,6 +359,16 @@ class _DownloadDriver extends _TaskDriver {
       _emit(_snapshot, done: true);
     } catch (error, stack) {
       _fail(error, stack);
+    } finally {
+      // Always close the sink, even on error, so the underlying
+      // IOSink / file handle doesn't leak. download() may throw
+      // mid-stream (network drop, maxSize exceeded).
+      try {
+        await sink.close();
+      } catch (_) {
+        // Secondary close failures are intentionally swallowed — the
+        // primary exception is already propagated through _fail.
+      }
     }
   }
 }
