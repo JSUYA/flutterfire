@@ -1,43 +1,60 @@
 # firebase_storage_tizen
 
-The [Firebase Storage for Flutter](https://pub.dev/packages/firebase_storage) implementation for Tizen.
+[![pub package](https://img.shields.io/pub/v/firebase_storage_tizen.svg)](https://pub.dev/packages/firebase_storage_tizen)
 
-It offers experimental features for using Firebase on Flutter for Tizen. It works by wrapping cross-compiled libraries that are based on the [Firebase C++ SDK](https://github.com/firebase/firebase-cpp-sdk) for Linux.
+The Tizen implementation of [`firebase_storage`](https://pub.dev/packages/firebase_storage).
 
-
-# Usage
-
-To use this package, you need to include `firebase_storage_tizen` as a dependency alongside `firebase_storage` in your `pubspec.yaml`. Please note that `firebase_storage_tizen` implementation is not officially endorsed for `firebase_storage`.
-
-```yaml
-dependencies:
-  firebase_storage: ^11.0.10
-  firebase_storage_tizen: ^0.1.0
-```
-
-Then you can import `firebase_storage` in your Dart code:
-
-```dart
-import 'package:firebase_storage/firebase_storage.dart';
-```
+Non-endorsed federated plugin: add it alongside `firebase_storage` and
+`firebase_core_tizen`. Authentication tokens are brokered through
+`firebase_core_tizen`'s `TizenAuthContext` — drop in `firebase_auth_tizen` if
+your app needs an end-user session.
 
 ## Required privileges
-
-To use this plugin in a Tizen application, you may need to declare the following privileges in your `tizen-manifest.xml` file.
 
 ```xml
 <privileges>
   <privilege>http://tizen.org/privilege/internet</privilege>
+  <!-- Optional: add mediastorage if the app reads user media for upload. -->
+  <!-- <privilege>http://tizen.org/privilege/mediastorage</privilege> -->
 </privileges>
 ```
 
-- `http://tizen.org/privilege/internet` allows the application to access the Internet.
+## Usage
 
-For the details on Tizen privileges, please see [Tizen Docs: API Privileges](https://docs.tizen.org/application/dotnet/get-started/api-privileges).
+```yaml
+dependencies:
+  firebase_core: ^4.7.0
+  firebase_core_tizen: ^2.0.0
+  firebase_storage: ^13.3.0
+  firebase_storage_tizen: ^0.2.0
+```
 
-# Limitations
+```dart
+import 'package:firebase_storage/firebase_storage.dart';
 
-The following features are currently unavailable as they're not supported by the version of Firebase C++ SDK for Linux that this plugin is currently based on.
+final Reference ref = FirebaseStorage.instance.ref('profile.png');
+final UploadTask task = ref.putFile(File('/tmp/profile.png'));
+await task;
+final String url = await ref.getDownloadURL();
+```
 
- - useEmulator method of FirebaseStorage class.
- - listAll method of Reference class.
+## Supported devices
+
+| Tizen version | TV | TV emulator |
+|:-------------:|:--:|:-----------:|
+| 6.0 and above | ✔️  | ✔️           |
+
+## Limitations
+
+The implementation is a pure-Dart REST client — we do **not** depend on
+`firebase_dart` for Storage because of [its unresolved putData metadata
+bug](https://github.com/appsup-dart/firebase_dart/issues/36) and [listAll
+path duplication bug](https://github.com/appsup-dart/firebase_dart/issues/50).
+
+* `useStorageEmulator` throws `UnimplementedError` (loopback TLS unsupported
+  on TV).
+* Upload tasks support **cancel** but not **pause**/**resume**; `pause()` and
+  `resume()` throw `UnimplementedError` with a reason.
+* `putBlob` is web-only; Tizen callers should use `putData` / `putFile`.
+* Custom download-token issuance is not part of the public Storage API —
+  pre-mint tokens in the Firebase console or the Admin SDK.
