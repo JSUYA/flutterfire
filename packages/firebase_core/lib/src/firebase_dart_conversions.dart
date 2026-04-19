@@ -36,11 +36,24 @@ class FirebaseDartOptionsConversions {
   }
 
   /// Map a `firebase_dart` [fd.FirebaseOptions] back to the FlutterFire type.
+  ///
+  /// Throws [ArgumentError] when the source lacks a `messagingSenderId` —
+  /// FlutterFire's `FirebaseOptions.messagingSenderId` is non-nullable, and
+  /// per the class docstring we refuse to fabricate identifiers.
   static FirebaseOptions fromDart(fd.FirebaseOptions options) {
+    final String? senderId = options.messagingSenderId;
+    if (senderId == null) {
+      throw ArgumentError.value(
+        options,
+        'options',
+        'firebase_dart FirebaseOptions.messagingSenderId was null; '
+            'FlutterFire requires a non-null messagingSenderId.',
+      );
+    }
     return FirebaseOptions(
       apiKey: options.apiKey,
       appId: options.appId,
-      messagingSenderId: options.messagingSenderId,
+      messagingSenderId: senderId,
       projectId: options.projectId,
       authDomain: options.authDomain,
       databaseURL: options.databaseURL,

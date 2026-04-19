@@ -75,10 +75,9 @@ class FirebaseTizenRuntime {
       fd.FirebaseDart.setup(
         storagePath: path,
         isolated: true,
-        platform: fd.Platform.linux(
-          isOnline: true,
-          isMobile: false,
-        ),
+        // firebase_dart 1.6.2's Platform.linux takes only `isOnline`;
+        // `isMobile` is hard-coded to false inside LinuxPlatform.
+        platform: fd.Platform.linux(isOnline: true),
       );
       _storagePath = path;
       _ready = true;
