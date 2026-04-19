@@ -1,0 +1,70 @@
+# Dockerfile for running `flutter-tizen build tpk` against every example
+# app in the repo. Extends the analyzer image with:
+#   * Tizen Studio CLI 5.5 + TV 7.0 NativeAppDevelopment platform
+#   * A self-signed Tizen profile so `tizen package --sign` succeeds
+#   * .NET SDK 7.0 (Runner.dll build target)
+#
+# This image is heavy (~4 GB) so it's split out from the analyzer; only
+# the build job pulls it in.
+#
+# Build:  docker build -f Dockerfile.build -t flutterfire-tizen-build .
+# Run:    docker run --rm --platform=linux/amd64 -v "$PWD:/repo" \
+#             flutterfire-tizen-build /repo/tools/docker_build.sh
+
+FROM --platform=linux/amd64 flutterfire-tizen-analyze
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# .NET SDK 7.0 (Tizen.NET Runner target).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libsdl2-2.0-0 libegl1 libgl1 libpulse0 libasound2 libbsd0 \
+      libxrender1 libxext6 libxi6 libfontconfig1 libnss3 libnspr4 \
+      libxkbcommon0 libxcomposite1 libxcursor1 libxrandr2 libxdamage1 \
+      libpangocairo-1.0-0 libgbm1 ca-certificates gnupg \
+      openjdk-17-jdk zlib1g \
+ && wget -qO /tmp/packages-microsoft-prod.deb \
+      https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb \
+ && dpkg -i /tmp/packages-microsoft-prod.deb \
+ && rm /tmp/packages-microsoft-prod.deb \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends dotnet-sdk-7.0 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Tizen Studio 5.5 CLI installer (non-interactive silent mode). The
+# web-cli binary needs DISPLAY-less TTY; we feed stdin with `yes` to
+# auto-accept the license.
+ENV TIZEN_STUDIO=/opt/tizen-studio
+ENV TIZEN_STUDIO_DATA=/root/tizen-studio-data
+ENV PATH="${TIZEN_STUDIO}/tools/ide/bin:${TIZEN_STUDIO}/tools:${PATH}"
+
+ARG TIZEN_STUDIO_VERSION=5.5
+RUN curl -fsSL \
+      "https://download.tizen.org/sdk/Installer/tizen-studio_${TIZEN_STUDIO_VERSION}/web-cli_Tizen_Studio_${TIZEN_STUDIO_VERSION}_ubuntu-64.bin" \
+      -o /tmp/tizen-installer.bin \
+ && chmod +x /tmp/tizen-installer.bin \
+ && /tmp/tizen-installer.bin --accept-license "${TIZEN_STUDIO}" \
+ && rm /tmp/tizen-installer.bin
+
+# Install the Tizen TV NativeAppDevelopment platform + IOT-Headed, and
+# the dotnet-cli-extensions so `dotnet build` picks up the Tizen SDK.
+RUN yes | "${TIZEN_STUDIO}/package-manager/package-manager-cli.bin" install \
+      NativeToolchain-Gcc-9.2 \
+      IOT-Headed-7.0-NativeAppDevelopment-CLI \
+      IOT-Headed-7.0-Tizen-DotNET-CLI \
+      CERTIFICATE-MANAGER-CLI \
+      CERTIFICATE-ADD-ON-CLI \
+ || true
+
+# Generate a self-signed 'tizen' certificate profile so `tizen package`
+# can sign the TPK. Uses a dummy developer identity — fine for CI but
+# not for Samsung store submission.
+RUN mkdir -p /root/tizen-studio-data \
+ && "${TIZEN_STUDIO}/tools/ide/bin/tizen" certificate \
+      -a tizen-ci -p tizen-ci -c KR -s FlutterFire -e ci@flutter-tizen.org \
+      -n tizen-ci -f /root/tizen-studio-data/tizen-ci \
+ && "${TIZEN_STUDIO}/tools/ide/bin/tizen" security-profiles add \
+      -n tizen -a /root/tizen-studio-data/tizen-ci.p12 -p tizen-ci \
+ || true
+
+WORKDIR /repo

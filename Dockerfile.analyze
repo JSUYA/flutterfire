@@ -1,0 +1,35 @@
+# Dockerfile for running `dart pub get` + `dart analyze` on every Tizen
+# plugin. Intentionally does NOT install Tizen Studio (which is ~2 GB and
+# needs a separate build-step image); analyzer coverage does not require
+# the native toolchain.
+#
+# Build:  docker build -f Dockerfile.analyze -t flutterfire-tizen-analyze .
+# Run:    docker run --rm -v "$PWD:/repo" flutterfire-tizen-analyze /repo/tools/docker_analyze.sh
+
+FROM --platform=linux/amd64 ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:/opt/flutter-tizen/bin:$PATH"
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates curl git unzip xz-utils zip libglu1-mesa \
+      build-essential python3 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Flutter stable. Pin a specific version so repeated builds are
+# reproducible.
+ARG FLUTTER_VERSION=3.27.0
+RUN git clone --depth=1 --branch=${FLUTTER_VERSION} \
+      https://github.com/flutter/flutter.git /opt/flutter \
+ && git config --global --add safe.directory /opt/flutter \
+ && flutter config --no-analytics \
+ && flutter precache --universal
+
+# flutter-tizen CLI. Needed so `flutter-tizen pub get` works the same way
+# the real tool does on Tizen.
+RUN git clone --depth=1 https://github.com/flutter-tizen/flutter-tizen.git \
+      /opt/flutter-tizen \
+ && git config --global --add safe.directory /opt/flutter-tizen
+
+WORKDIR /repo
