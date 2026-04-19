@@ -1,22 +1,20 @@
-name: Analyze
+name: analyze
 
 on: [push, pull_request]
 
 jobs:
-  format:
+  analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
           cache: true
-          cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'
-          cache-path: '${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:'
-          architecture: x64
-      - name: Install clang-format
-        run: |
-          sudo apt-get update
-          sudo apt-get install clang-format-11
-      - name: Check format
-        run: ./tools/tools_runner.sh format --fail-on-change --clang-format=clang-format-11
+      - name: Install plugin tool dependencies
+        run: dart pub get
+        working-directory: tools
+      - name: Dart analyze
+        run: ./tools/tools_runner.sh analyze --custom-analysis=$(ls packages | tr '\n' ',')
+      - name: Dart format
+        run: ./tools/tools_runner.sh format --fail-on-change --no-clang-format
