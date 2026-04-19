@@ -222,7 +222,7 @@ class FirebaseAuthTizen extends FirebaseAuthPlatform {
       final fd.ActionCodeInfo info = await _dartAuth.checkActionCode(code);
       return ActionCodeInfo(
         operation: info.operation.index,
-        data: <String, Object?>{
+        data: <String, dynamic>{
           'email': info.data.email,
           'previousEmail': info.data.previousEmail,
         },
