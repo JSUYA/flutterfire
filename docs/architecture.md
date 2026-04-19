@@ -56,8 +56,13 @@ refresh loop, Hive persistence, and HTTP client singleton in one place.
 The runtime is initialised once per process via a `Lock`-guarded
 `FirebaseDart.setup(isolated: true, …)` call. Persistence uses
 `path_provider`'s application-support directory, inside the app's Tizen
-sandbox. Hive is opened with an encryption cipher derived from a device-local
-key.
+sandbox. **Hive is currently opened without an encryption cipher** — ID and
+refresh tokens therefore live as plaintext under the app-specific data
+path. This is contained by Tizen's app-sandboxing model (no other app on a
+stock Tizen TV can read that directory), but a privileged/attacker-rooted
+device can dump the box. We track encrypted persistence as a follow-up
+task; until it lands, consumers that worry about stolen devices should sign
+out on app suspend.
 
 ## Auth token sharing
 
