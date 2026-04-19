@@ -28,20 +28,48 @@ class QueryTizen extends QueryPlatform {
   String get path => _query.path.toString();
 
   fd.Query _applyModifiers(QueryModifiers modifiers) {
-    return modifiers.apply<fd.Query>(
-      _query,
-      orderByChild: (fd.Query q, String path) => q.orderByChild(path),
-      orderByKey: (fd.Query q) => q.orderByKey(),
-      orderByValue: (fd.Query q) => q.orderByValue(),
-      orderByPriority: (fd.Query q) => q.orderByPriority(),
-      startAt: (fd.Query q, Object? value, String? key) =>
-          q.startAt(value, key),
-      endAt: (fd.Query q, Object? value, String? key) => q.endAt(value, key),
-      equalTo: (fd.Query q, Object? value, String? key) =>
-          q.equalTo(value, key),
-      limitToFirst: (fd.Query q, int limit) => q.limitToFirst(limit),
-      limitToLast: (fd.Query q, int limit) => q.limitToLast(limit),
-    );
+    // QueryModifiers in firebase_database_platform_interface 0.3.1+1
+    // exposes `.toList()` / `.toIterable()` but no `.apply<T>(...)` builder
+    // helper. Iterate the serialised modifier list and map each entry onto
+    // the matching firebase_dart Query method. Unknown modifier names fall
+    // through to an UnimplementedError so silent data loss is impossible.
+    fd.Query q = _query;
+    for (final Map<String, Object?> modifier in modifiers.toList()) {
+      final String? name = modifier['name'] as String?;
+      switch (name) {
+        case 'orderByChild':
+          q = q.orderByChild(modifier['path'] as String);
+        case 'orderByKey':
+          q = q.orderByKey();
+        case 'orderByValue':
+          q = q.orderByValue();
+        case 'orderByPriority':
+          q = q.orderByPriority();
+        case 'startAt':
+          q = q.startAt(modifier['value'], key: modifier['key'] as String?);
+        case 'endAt':
+          q = q.endAt(modifier['value'], key: modifier['key'] as String?);
+        case 'startAfter':
+        case 'endBefore':
+          // firebase_dart lacks exclusive cursor methods; approximate with
+          // the inclusive variant. Documented in the plugin README.
+          q = name == 'startAfter'
+              ? q.startAt(modifier['value'], key: modifier['key'] as String?)
+              : q.endAt(modifier['value'], key: modifier['key'] as String?);
+        case 'equalTo':
+          q = q.equalTo(modifier['value'], key: modifier['key'] as String?);
+        case 'limitToFirst':
+          q = q.limitToFirst(modifier['value']! as int);
+        case 'limitToLast':
+          q = q.limitToLast(modifier['value']! as int);
+        default:
+          throw UnimplementedError(
+            'Unknown QueryModifier "$name" — firebase_database_tizen needs '
+            'updating for this modifier.',
+          );
+      }
+    }
+    return q;
   }
 
   @override
