@@ -1,2 +1,9 @@
 plugins:
-  tests: ["tv-7.0"]
+  firebase_core: ["tv-9.0"]
+  firebase_auth: ["tv-9.0"]
+  firebase_database: ["tv-9.0"]
+  firebase_storage: ["tv-9.0"]
+  cloud_functions: ["tv-9.0"]
+  firebase_app_installations: ["tv-9.0"]
+  firebase_remote_config: ["tv-9.0"]
+  firebase_ai: ["tv-9.0"]
