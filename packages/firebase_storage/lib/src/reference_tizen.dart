@@ -105,7 +105,7 @@ class ReferenceTizen extends ReferencePlatform {
   Future<FullMetadata> getMetadata() async {
     final Map<String, Object?> raw =
         await _requireClient.getMetadata(fullPath);
-    return FullMetadata(raw);
+    return FullMetadata(Map<String, dynamic>.from(raw));
   }
 
   @override
@@ -133,11 +133,11 @@ class ReferenceTizen extends ReferencePlatform {
       prefixes.addAll(result.prefixes);
       token = result.nextPageToken;
     } while (token != null);
-    return ListResultPlatform(
-      this,
+    return _ListResultTizen(
+      _requireStorage,
+      null,
       items: items,
       prefixes: prefixes,
-      nextPageToken: null,
     );
   }
 
@@ -166,11 +166,11 @@ class ReferenceTizen extends ReferencePlatform {
         }
       }
     }
-    return ListResultPlatform(
-      this,
+    return _ListResultTizen(
+      _requireStorage,
+      response['nextPageToken'] as String?,
       items: items,
       prefixes: prefixes,
-      nextPageToken: response['nextPageToken'] as String?,
     );
   }
 
@@ -242,8 +242,29 @@ class ReferenceTizen extends ReferencePlatform {
   Future<FullMetadata> updateMetadata(SettableMetadata metadata) async {
     final Map<String, Object?> response =
         await _requireClient.updateMetadata(fullPath, metadata.asMap());
-    return FullMetadata(response);
+    return FullMetadata(Map<String, dynamic>.from(response));
   }
+}
+
+/// Tizen [ListResultPlatform] subclass that exposes `items` / `prefixes`
+/// through the abstract getters the upstream platform interface defines.
+///
+/// The upstream `ListResultPlatform` constructor takes only
+/// `(FirebaseStoragePlatform?, String? nextPageToken)`; `items` and
+/// `prefixes` are abstract and must be provided by a subclass.
+class _ListResultTizen extends ListResultPlatform {
+  _ListResultTizen(
+    FirebaseStoragePlatform? storage,
+    String? nextPageToken, {
+    required this.items,
+    required this.prefixes,
+  }) : super(storage, nextPageToken);
+
+  @override
+  final List<ReferencePlatform> items;
+
+  @override
+  final List<ReferencePlatform> prefixes;
 }
 
 extension _SettableMetadataAsMap on SettableMetadata {

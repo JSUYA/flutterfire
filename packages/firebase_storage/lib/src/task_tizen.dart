@@ -22,7 +22,9 @@ class TaskSnapshotTizen extends TaskSnapshotPlatform {
     FullMetadata? metadata,
   })  : _ref = ref,
         _metadata = metadata,
-        super(state, <String, Object?>{
+        // TaskSnapshotPlatform(super) takes Map<String, dynamic>, not
+        // Map<String, Object?>. Generics are invariant in Dart.
+        super(state, <String, dynamic>{
           'bytesTransferred': bytesTransferred,
           'totalBytes': totalBytes,
         });
@@ -53,7 +55,7 @@ class TaskTizen extends TaskPlatform {
     required this.reference,
     required _TaskDriver driver,
   }) : _driver = driver {
-    _driver.bind(this);
+    _driver.start();
   }
 
   /// Factory for simple data uploads.
@@ -66,6 +68,7 @@ class TaskTizen extends TaskPlatform {
     return TaskTizen._(
       reference: reference,
       driver: _UploadDriver(
+        reference: reference,
         client: client,
         path: reference.fullPath,
         dataSource: Stream<List<int>>.value(data),
@@ -86,6 +89,7 @@ class TaskTizen extends TaskPlatform {
     return TaskTizen._(
       reference: reference,
       driver: _UploadDriver(
+        reference: reference,
         client: client,
         path: reference.fullPath,
         dataSource: source,
@@ -104,6 +108,7 @@ class TaskTizen extends TaskPlatform {
     return TaskTizen._(
       reference: reference,
       driver: _DownloadDriver(
+        reference: reference,
         client: client,
         path: reference.fullPath,
         sink: sink,
@@ -145,19 +150,22 @@ class TaskTizen extends TaskPlatform {
 }
 
 abstract class _TaskDriver {
+  _TaskDriver({required this.reference});
+
+  final ReferenceTizen reference;
   final StreamController<TaskSnapshotPlatform> _events =
       StreamController<TaskSnapshotPlatform>.broadcast();
   final Completer<TaskSnapshotPlatform> _completer =
       Completer<TaskSnapshotPlatform>();
-  TaskTizen? _task;
   bool _cancelled = false;
 
   Stream<TaskSnapshotPlatform> get snapshotEvents => _events.stream;
   Future<TaskSnapshotPlatform> get onComplete => _completer.future;
   TaskSnapshotPlatform get currentSnapshot;
 
-  void bind(TaskTizen task) {
-    _task = task;
+  /// Schedules the driver to begin work on the next microtask so constructors
+  /// return immediately.
+  void start() {
     scheduleMicrotask(_run);
   }
 
@@ -191,11 +199,11 @@ abstract class _TaskDriver {
   }
 
   bool get isCancelled => _cancelled;
-  ReferenceTizen get _ref => _task!.reference;
 }
 
 class _UploadDriver extends _TaskDriver {
   _UploadDriver({
+    required super.reference,
     required this.client,
     required this.path,
     required this.dataSource,
@@ -204,7 +212,7 @@ class _UploadDriver extends _TaskDriver {
   }) : _snapshot = TaskSnapshotTizen(
           bytesTransferred: 0,
           totalBytes: totalBytes,
-          ref: _UnassignedRef.instance,
+          ref: reference,
           state: TaskState.running,
         );
 
@@ -294,13 +302,14 @@ class _UploadDriver extends _TaskDriver {
   }
 
   Future<void> _complete(Map<String, Object?> response, int bytes) async {
-    final FullMetadata metadata = FullMetadata(response);
+    final FullMetadata meta =
+        FullMetadata(Map<String, dynamic>.from(response));
     _snapshot = TaskSnapshotTizen(
       bytesTransferred: bytes,
       totalBytes: totalBytes,
-      ref: _ref,
+      ref: reference,
       state: TaskState.success,
-      metadata: metadata,
+      metadata: meta,
     );
     _emit(_snapshot, done: true);
   }
@@ -309,7 +318,7 @@ class _UploadDriver extends _TaskDriver {
     return TaskSnapshotTizen(
       bytesTransferred: transferred,
       totalBytes: totalBytes,
-      ref: _ref,
+      ref: reference,
       state: TaskState.running,
     );
   }
@@ -318,7 +327,7 @@ class _UploadDriver extends _TaskDriver {
     _snapshot = TaskSnapshotTizen(
       bytesTransferred: _snapshot.bytesTransferred,
       totalBytes: totalBytes,
-      ref: _ref,
+      ref: reference,
       state: TaskState.canceled,
     );
     _emit(_snapshot, done: true);
@@ -327,13 +336,14 @@ class _UploadDriver extends _TaskDriver {
 
 class _DownloadDriver extends _TaskDriver {
   _DownloadDriver({
+    required super.reference,
     required this.client,
     required this.path,
     required this.sink,
   }) : _snapshot = TaskSnapshotTizen(
           bytesTransferred: 0,
           totalBytes: 0,
-          ref: _UnassignedRef.instance,
+          ref: reference,
           state: TaskState.running,
         );
 
@@ -353,7 +363,7 @@ class _DownloadDriver extends _TaskDriver {
       _snapshot = TaskSnapshotTizen(
         bytesTransferred: bytes,
         totalBytes: bytes,
-        ref: _ref,
+        ref: reference,
         state: TaskState.success,
       );
       _emit(_snapshot, done: true);
@@ -371,13 +381,6 @@ class _DownloadDriver extends _TaskDriver {
       }
     }
   }
-}
-
-/// Placeholder reference used while the [TaskTizen] constructor is still
-/// assigning its own reference. Overridden on `bind`.
-class _UnassignedRef extends ReferenceTizen {
-  _UnassignedRef._() : super.unassigned();
-  static final _UnassignedRef instance = _UnassignedRef._();
 }
 
 extension on SettableMetadata {
