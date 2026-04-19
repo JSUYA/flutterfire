@@ -1,0 +1,23 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build-examples:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install flutter-tizen
+        run: |
+          git clone https://github.com/flutter-tizen/flutter-tizen.git $HOME/flutter-tizen
+          echo "$HOME/flutter-tizen/bin" >> $GITHUB_PATH
+      - name: Install plugin tool dependencies
+        run: dart pub get
+        working-directory: tools
+      - name: Build example TPKs
+        run: ./tools/tools_runner.sh build-examples --run-on-changed-packages
