@@ -19,7 +19,9 @@ class CloudFunctionsTizen extends FirebaseFunctionsPlatform {
           region: region,
           projectId: app?.options.projectId ?? '',
         ),
-        super(app: app, region: region);
+        // FirebaseFunctionsPlatform(this.app, this.region) takes positional
+        // args; passing them as named fails to compile.
+        super(app, region);
 
   /// Entry point registered via
   /// `dartPluginClass: CloudFunctionsTizen` in `pubspec.yaml`.

@@ -36,12 +36,11 @@ class FirebaseStorageTizen extends FirebaseStoragePlatform {
 
   @override
   FirebaseStoragePlatform delegateFor({
-    FirebaseApp? app,
+    required FirebaseApp app,
     required String bucket,
   }) {
-    final String effectiveBucket = bucket.isNotEmpty
-        ? bucket
-        : app?.options.storageBucket ?? '';
+    final String effectiveBucket =
+        bucket.isNotEmpty ? bucket : app.options.storageBucket ?? '';
     return FirebaseStorageTizen._(app: app, bucket: effectiveBucket);
   }
 
