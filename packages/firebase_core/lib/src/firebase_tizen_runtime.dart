@@ -7,6 +7,9 @@ import 'dart:io';
 
 import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
 import 'package:firebase_dart/firebase_dart.dart' as fd;
+// Platform / LinuxPlatform are exported from this subpath, not from the
+// top-level firebase_dart.dart.
+import 'package:firebase_dart/implementation/pure_dart.dart' as fd_pure;
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -76,8 +79,9 @@ class FirebaseTizenRuntime {
         storagePath: path,
         isolated: true,
         // firebase_dart 1.6.2's Platform.linux takes only `isOnline`;
-        // `isMobile` is hard-coded to false inside LinuxPlatform.
-        platform: fd.Platform.linux(isOnline: true),
+        // `isMobile` is hard-coded to false inside LinuxPlatform. The
+        // Platform type itself lives in implementation/pure_dart.dart.
+        platform: fd_pure.Platform.linux(isOnline: true),
       );
       _storagePath = path;
       _ready = true;
@@ -88,7 +92,7 @@ class FirebaseTizenRuntime {
   /// `firebase_dart.FirebaseApp`.
   ///
   /// When [name] is null the default app name is used, matching
-  /// [FirebasePlatform.defaultFirebaseAppName].
+  /// [defaultFirebaseAppName].
   Future<fd.FirebaseApp> registerApp({
     String? name,
     required FirebaseOptions options,
@@ -96,7 +100,7 @@ class FirebaseTizenRuntime {
     await ensureInitialized();
     final String appName = name ?? defaultFirebaseAppName;
     final fd.FirebaseApp existing = _apps[appName] ??
-        await _initializeDartApp(name: appName, options: options);
+        await _initializeDartApp(appName: appName, options: options);
     _apps[appName] = existing;
     return existing;
   }
