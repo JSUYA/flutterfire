@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:firebase_database_platform_interface/firebase_database_platform_interface.dart';
 import 'package:firebase_database_tizen/firebase_database_tizen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,7 +12,7 @@ void main() {
 
     setUp(() {
       FirebaseDatabaseTizen.register();
-      database = FirebaseDatabaseTizen.instance;
+      database = DatabasePlatform.instance as FirebaseDatabaseTizen;
     });
 
     test('setPersistenceEnabled(true) throws with bug reference', () {
