@@ -1,0 +1,7 @@
+flutter/
+.vs/
+*.user
+.app.deps.json
+tizen_dotnet_project.yaml
+bin/
+obj/

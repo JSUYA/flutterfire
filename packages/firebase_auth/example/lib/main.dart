@@ -93,17 +93,23 @@ class _FirebaseAuthExampleAppState extends State<FirebaseAuthExampleApp> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Text('Current user: ${_currentUser?.uid ?? 'signed-out'}'),
+              Text(
+                'Current user: ${_currentUser?.uid ?? 'signed-out'}',
+                key: const Key('auth-current-user'),
+              ),
               const SizedBox(height: 8),
               ElevatedButton(
+                key: const Key('auth-sign-in-anon'),
                 onPressed: _signInAnonymously,
                 child: const Text('Sign in anonymously'),
               ),
               ElevatedButton(
+                key: const Key('auth-sign-in-email'),
                 onPressed: _signInEmailPassword,
                 child: const Text('Sign in with email/password'),
               ),
               ElevatedButton(
+                key: const Key('auth-sign-out'),
                 onPressed: _signOut,
                 child: const Text('Sign out'),
               ),
@@ -112,7 +118,7 @@ class _FirebaseAuthExampleAppState extends State<FirebaseAuthExampleApp> {
                 child: ListView.builder(
                   itemCount: _log.length,
                   itemBuilder: (BuildContext context, int index) =>
-                      Text(_log[index]),
+                      Text(_log[index], key: Key('auth-log-$index')),
                 ),
               ),
             ],

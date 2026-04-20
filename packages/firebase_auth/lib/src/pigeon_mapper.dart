@@ -41,20 +41,22 @@ class AuthPigeonMapper {
   /// (not a `PigeonUserInfo`) that the upstream `UserInfo.fromJson` parses.
   static List<Map<Object?, Object?>?> providerDataFromDart(fd.User user) {
     return user.providerData
-        .map((fd.UserInfo info) => <Object?, Object?>{
-              'uid': info.uid,
-              'email': info.email,
-              'displayName': info.displayName,
-              'photoUrl': info.photoURL,
-              'phoneNumber': info.phoneNumber,
-              'isAnonymous': false,
-              'isEmailVerified': false,
-              'providerId': info.providerId,
-              'tenantId': null,
-              'refreshToken': null,
-              'creationTimestamp': null,
-              'lastSignInTimestamp': null,
-            })
+        .map(
+          (fd.UserInfo info) => <Object?, Object?>{
+            'uid': info.uid,
+            'email': info.email,
+            'displayName': info.displayName,
+            'photoUrl': info.photoURL,
+            'phoneNumber': info.phoneNumber,
+            'isAnonymous': false,
+            'isEmailVerified': false,
+            'providerId': info.providerId,
+            'tenantId': null,
+            'refreshToken': null,
+            'creationTimestamp': null,
+            'lastSignInTimestamp': null,
+          },
+        )
         .toList(growable: false);
   }
 
@@ -103,11 +105,12 @@ class AuthPigeonMapper {
 
   /// Map firebase_dart's ActionCodeInfo onto the upstream wrapper.
   static ActionCodeInfo actionCodeInfoFromDart(fd.ActionCodeInfo info) {
+    final Map<String, dynamic> data = info.data;
     return ActionCodeInfo(
       operation: _mapActionOperation(info.operation),
       data: ActionCodeInfoData(
-        email: info.data.email,
-        previousEmail: info.data.previousEmail,
+        email: data['email'] as String?,
+        previousEmail: data['previousEmail'] as String?,
       ),
     );
   }

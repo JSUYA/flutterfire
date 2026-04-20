@@ -64,4 +64,44 @@ than silently returning:
 Storage, Cloud Functions, and Remote Config read a single, always-fresh ID
 token instead of spinning per-package refresh timers.
 
+## Package structure
+
+* `lib/firebase_auth_tizen.dart`: public entrypoint that registers the Tizen federated implementation.
+* `lib/src/firebase_auth_tizen.dart`: `FirebaseAuthPlatform` bridge backed by `firebase_dart`.
+* `lib/src/user_tizen.dart`: upstream-shaped `UserPlatform` wrapper.
+* `lib/src/pigeon_mapper.dart`: translation layer between upstream pigeon types and `firebase_dart` values.
+* `lib/src/multi_factor.dart`, `action_code_settings.dart`, related helpers: explicit unsupported-surface handling.
+
+## Flow chart
+
+```mermaid
+flowchart TD
+  A[App calls FirebaseAuth API] --> B[FirebaseAuthTizen]
+  B --> C[Resolve Firebase app via firebase_core_tizen]
+  C --> D[Delegate auth call to firebase_dart]
+  D --> E[Map firebase_dart result into upstream platform classes]
+  E --> F[Update TizenAuthContext current user and ID token]
+  F --> G[Return FirebaseAuth/User/UserCredential to Flutter app]
+```
+
+## Architecture chart
+
+```mermaid
+graph LR
+  App[Flutter app]
+  AuthPkg[firebase_auth_tizen]
+  Mapper[AuthPigeonMapper]
+  FD[firebase_dart auth]
+  Core[firebase_core_tizen]
+  AuthCtx[TizenAuthContext]
+  RestPkgs[storage/functions/remote_config]
+
+  App --> AuthPkg
+  AuthPkg --> Core
+  AuthPkg --> FD
+  AuthPkg --> Mapper
+  AuthPkg --> AuthCtx
+  RestPkgs --> AuthCtx
+```
+
 [federated]: https://docs.flutter.dev/packages-and-plugins/developing-packages#non-endorsed-federated-plugin
