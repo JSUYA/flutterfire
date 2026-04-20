@@ -21,7 +21,11 @@ class FirebaseAppTizen extends FirebaseAppPlatform {
   FirebaseAppTizen({
     required String name,
     required FirebaseOptions options,
-  }) : super(name, options);
+    void Function(String name)? onDelete,
+  })  : _onDelete = onDelete,
+        super(name, options);
+
+  final void Function(String name)? _onDelete;
 
   @override
   bool get isAutomaticDataCollectionEnabled {
@@ -34,6 +38,7 @@ class FirebaseAppTizen extends FirebaseAppPlatform {
   Future<void> delete() async {
     await FirebaseTizenRuntime.instance.deleteApp(name);
     TizenAuthContext.instance.clear(name);
+    _onDelete?.call(name);
   }
 
   @override

@@ -39,7 +39,12 @@ void main() {
     test('Firebase.app() Exception', () async {
       expect(
         () => Firebase.app('NoApp'),
-        throwsA(noAppExists('NoApp')),
+        throwsA(
+          isA<FirebaseException>()
+              .having((e) => e.plugin, 'plugin', 'core')
+              .having((e) => e.code, 'code', 'no-app')
+              .having((e) => e.message, 'message', contains('NoApp')),
+        ),
       );
     });
 

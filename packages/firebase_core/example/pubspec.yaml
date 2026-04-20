@@ -23,3 +23,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+dependency_overrides:
+  firebase_core_tizen:
+    path: ../
+  firebase_core_platform_interface: 4.8.0

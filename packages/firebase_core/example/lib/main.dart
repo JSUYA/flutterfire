@@ -80,18 +80,22 @@ class _FirebaseCoreExampleAppState extends State<FirebaseCoreExampleApp> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               ElevatedButton(
+                key: const Key('core-init-default'),
                 onPressed: _initializeDefault,
                 child: const Text('Initialize default app'),
               ),
               ElevatedButton(
+                key: const Key('core-init-secondary'),
                 onPressed: _initializeSecondary,
                 child: const Text('Initialize secondary app'),
               ),
               ElevatedButton(
+                key: const Key('core-list-apps'),
                 onPressed: _listApps,
                 child: const Text('List apps'),
               ),
               ElevatedButton(
+                key: const Key('core-delete-secondary'),
                 onPressed: _deleteSecondary,
                 child: const Text('Delete secondary'),
               ),
@@ -100,7 +104,7 @@ class _FirebaseCoreExampleAppState extends State<FirebaseCoreExampleApp> {
                 child: ListView.builder(
                   itemCount: _log.length,
                   itemBuilder: (BuildContext context, int index) =>
-                      Text(_log[index]),
+                      Text(_log[index], key: Key('core-log-$index')),
                 ),
               ),
             ],

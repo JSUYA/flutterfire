@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
-
 import 'firebase_app_tizen.dart';
 import 'firebase_tizen_runtime.dart';
 
@@ -57,6 +56,9 @@ class FirebaseCoreTizen extends FirebasePlatform {
     final FirebaseAppTizen app = FirebaseAppTizen(
       name: appName,
       options: options,
+      onDelete: (String deletedName) {
+        _appCache.remove(deletedName);
+      },
     );
     _appCache[appName] = app;
     return app;
@@ -69,7 +71,7 @@ class FirebaseCoreTizen extends FirebasePlatform {
       return cached;
     }
     throw FirebaseException(
-      plugin: 'firebase_core',
+      plugin: 'core',
       code: 'no-app',
       message:
           'No Firebase App "$name" has been created - call Firebase.initializeApp()',

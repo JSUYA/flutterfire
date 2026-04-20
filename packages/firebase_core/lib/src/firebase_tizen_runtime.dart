@@ -127,7 +127,7 @@ class FirebaseTizenRuntime {
     final fd.FirebaseApp? app = _apps[name];
     if (app == null) {
       throw FirebaseException(
-        plugin: 'firebase_core',
+        plugin: 'core',
         code: 'no-app',
         message:
             'No Firebase App "$name" has been created - call Firebase.initializeApp()',
