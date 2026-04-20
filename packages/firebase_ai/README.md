@@ -49,3 +49,42 @@ print(response.text);
   out of scope for v0.1.0.
 * Function-calling tool responses are supported, but advanced tool
   orchestration that relies on gRPC-only tool contexts is not.
+
+## Package structure
+
+* `lib/firebase_ai_tizen.dart`: public backend accessor used by the example and tests.
+* `lib/src/firebase_ai_backend.dart`: thin abstraction over the Gemini REST surface.
+* `lib/src/firebase_ai_rest_client.dart`: authenticated HTTP transport and request assembly.
+* `lib/src/model_payloads.dart`: helpers for content/tool JSON shapes.
+
+## Flow chart
+
+```mermaid
+flowchart TD
+  A[App builds GenerativeModel request] --> B[firebase_ai_tizen backend]
+  B --> C[Assemble Gemini JSON payload]
+  C --> D[TizenHttpClient signs request with Firebase app context]
+  D --> E[Google AI generateContent endpoint]
+  E --> F[Decode text, candidate, and tool payloads]
+  F --> G[Return Firebase AI response objects]
+```
+
+## Architecture chart
+
+```mermaid
+graph LR
+  App[Flutter app]
+  AIPkg[firebase_ai_tizen]
+  Backend[FirebaseAiBackend]
+  Rest[FirebaseAiRestClient]
+  Http[TizenHttpClient]
+  AI[Google AI REST API]
+  Core[firebase_core_tizen]
+
+  App --> AIPkg
+  AIPkg --> Backend
+  Backend --> Rest
+  Rest --> Http
+  Rest --> AI
+  AIPkg --> Core
+```
