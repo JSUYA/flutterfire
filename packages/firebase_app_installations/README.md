@@ -49,3 +49,45 @@ final String token =
   would require an encrypted cache; add that in a later release.
 * Analytics/Crashlytics/Performance are unavailable on Tizen, so the FID is
   not forwarded to any Firebase telemetry service.
+
+## Package structure
+
+* `lib/firebase_app_installations_tizen.dart`: public registration entrypoint.
+* `lib/src/firebase_app_installations_tizen.dart`: `FirebaseInstallationsPlatform` implementation.
+* `lib/src/installations_rest_client.dart`: FID creation and auth-token refresh transport.
+* `lib/src/installations_store.dart`: in-memory cache for FID/token state per app.
+
+## Flow chart
+
+```mermaid
+flowchart TD
+  A[App calls getId or getToken] --> B[FirebaseInstallationsTizen]
+  B --> C[Check in-memory store]
+  C -->|cache miss| D[InstallationsRestClient.createInstallation]
+  C -->|expired token| E[InstallationsRestClient.generateAuthToken]
+  D --> F[Store FID and refresh state]
+  E --> F
+  F --> G[Return FID or auth token]
+```
+
+## Architecture chart
+
+```mermaid
+graph LR
+  App[Flutter app]
+  InstPkg[firebase_app_installations_tizen]
+  Store[InstallationsStore]
+  Rest[InstallationsRestClient]
+  Http[TizenHttpClient]
+  API[Firebase Installations REST]
+  Core[firebase_core_tizen]
+  RCPkg[firebase_remote_config_tizen]
+
+  App --> InstPkg
+  InstPkg --> Store
+  InstPkg --> Rest
+  Rest --> Http
+  Rest --> API
+  InstPkg --> Core
+  RCPkg --> InstPkg
+```

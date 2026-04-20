@@ -3,9 +3,18 @@
 // found in the LICENSE file.
 
 import 'package:firebase_app_installations/firebase_app_installations.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(const InstallationsExampleApp());
+import 'firebase_options.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const InstallationsExampleApp());
+}
 
 /// Example app showing FID + token retrieval.
 class InstallationsExampleApp extends StatefulWidget {
@@ -22,14 +31,21 @@ class _InstallationsExampleAppState extends State<InstallationsExampleApp> {
   String _token = 'unknown';
 
   Future<void> _loadFid() async {
-    final String fid = await FirebaseInstallations.instance.getId();
-    setState(() => _fid = fid);
+    try {
+      final String fid = await FirebaseInstallations.instance.getId();
+      setState(() => _fid = fid);
+    } catch (error) {
+      setState(() => _fid = 'error: $error');
+    }
   }
 
   Future<void> _refreshToken() async {
-    final String token =
-        await FirebaseInstallations.instance.getToken(true);
-    setState(() => _token = token);
+    try {
+      final String token = await FirebaseInstallations.instance.getToken(true);
+      setState(() => _token = token);
+    } catch (error) {
+      setState(() => _token = 'error: $error');
+    }
   }
 
   @override
@@ -44,13 +60,15 @@ class _InstallationsExampleAppState extends State<InstallationsExampleApp> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Text('FID: $_fid'),
-              Text('Token: $_token'),
+              Text('FID: $_fid', key: const Key('installations-fid')),
+              Text('Token: $_token', key: const Key('installations-token')),
               ElevatedButton(
+                key: const Key('installations-get-id'),
                 onPressed: _loadFid,
                 child: const Text('getId'),
               ),
               ElevatedButton(
+                key: const Key('installations-get-token'),
                 onPressed: _refreshToken,
                 child: const Text('getToken(forceRefresh: true)'),
               ),
