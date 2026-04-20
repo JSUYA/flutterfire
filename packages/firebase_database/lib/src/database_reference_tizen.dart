@@ -16,7 +16,7 @@ import 'on_disconnect_tizen.dart';
 /// filter builders.
 class QueryTizen extends QueryPlatform {
   /// Wraps [query] belonging to [database].
-  QueryTizen(this._database, this._query);
+  QueryTizen(this._database, this._query) : super(database: _database);
 
   final FirebaseDatabaseTizen _database;
   final fd.Query _query;
@@ -25,7 +25,7 @@ class QueryTizen extends QueryPlatform {
   DatabasePlatform get database => _database;
 
   @override
-  String get path => _query.path.toString();
+  String get path => _query.reference().path;
 
   fd.Query _applyModifiers(QueryModifiers modifiers) {
     // QueryModifiers serialises via toList() with these per-type shapes
@@ -74,16 +74,15 @@ class QueryTizen extends QueryPlatform {
   }
 
   @override
-  DatabaseReferencePlatform get ref => DatabaseReferenceTizen(
-        _database,
-        _query.reference(),
-      );
+  DatabaseReferencePlatform get ref =>
+      DatabaseReferenceTizen(_database, _query.reference());
 
   Stream<DatabaseEventPlatform> _observe(
     QueryModifiers modifiers,
     DatabaseEventType type,
   ) {
     final fd.Query applied = _applyModifiers(modifiers);
+    final fd.DatabaseReference appliedReference = applied.reference();
     Stream<fd.Event> source;
     switch (type) {
       case DatabaseEventType.value:
@@ -108,14 +107,18 @@ class QueryTizen extends QueryPlatform {
               event.snapshot,
               reference: DatabaseReferenceTizen(
                 _database,
-                event.snapshot.ref,
+                type == DatabaseEventType.value || event.snapshot.key == null
+                    ? appliedReference
+                    : appliedReference.child(event.snapshot.key!),
               ),
             );
-            controller.add(DatabaseEventTizen(
-              snapshot: snapshot,
-              previousChildKey: event.previousSiblingKey,
-              type: type,
-            ));
+            controller.add(
+              DatabaseEventTizen(
+                snapshot: snapshot,
+                previousChildKey: event.previousSiblingKey,
+                type: type,
+              ),
+            );
           },
           onError: controller.addError,
           onDone: controller.close,
@@ -154,11 +157,12 @@ class QueryTizen extends QueryPlatform {
 
   @override
   Future<DataSnapshotPlatform> get(QueryModifiers modifiers) async {
-    final fd.DataSnapshot snapshot = await _applyModifiers(modifiers).get();
+    final fd.Query applied = _applyModifiers(modifiers);
+    final fd.DataSnapshot snapshot = await applied.once();
     return DataSnapshotTizen(
       _database,
       snapshot,
-      reference: DatabaseReferenceTizen(_database, snapshot.ref),
+      reference: DatabaseReferenceTizen(_database, applied.reference()),
     );
   }
 
@@ -175,7 +179,7 @@ class DatabaseReferenceTizen extends QueryTizen
     implements DatabaseReferencePlatform {
   /// Wraps a firebase_dart [reference] belonging to [database].
   DatabaseReferenceTizen(FirebaseDatabaseTizen database, this._reference)
-      : super(database, _reference);
+    : super(database, _reference);
 
   final fd.DatabaseReference _reference;
 
@@ -250,8 +254,9 @@ class DatabaseReferenceTizen extends QueryTizen
     //   return null           => abort
     //   return mutated data   => commit
     // fd.Transaction.abort / .success are NOT public factories in 1.6.2.
-    final fd.TransactionResult result =
-        await _reference.runTransaction((fd.MutableData data) {
+    final fd.TransactionResult result = await _reference.runTransaction((
+      fd.MutableData data,
+    ) {
       final Transaction tx = transactionHandler(data.value);
       if (tx.aborted) {
         return null;
@@ -261,13 +266,9 @@ class DatabaseReferenceTizen extends QueryTizen
     });
     return _TizenTransactionResult(
       committed: result.committed,
-      snapshot: result.dataSnapshot == null
+      snapshotData: result.dataSnapshot == null
           ? null
-          : DataSnapshotTizen(
-              _database,
-              result.dataSnapshot!,
-              reference: this,
-            ),
+          : DataSnapshotTizen(_database, result.dataSnapshot!, reference: this),
     );
   }
 }
@@ -276,18 +277,16 @@ class DatabaseReferenceTizen extends QueryTizen
 /// accepts a `committed` bool; the snapshot is an abstract getter that
 /// subclasses must provide.
 class _TizenTransactionResult extends TransactionResultPlatform {
-  _TizenTransactionResult({required bool committed, this._snapshot})
-      : super(committed);
+  _TizenTransactionResult({required bool committed, this.snapshotData})
+    : super(committed);
 
-  final DataSnapshotPlatform? _snapshot;
+  final DataSnapshotPlatform? snapshotData;
 
   @override
   DataSnapshotPlatform get snapshot {
-    final DataSnapshotPlatform? snap = _snapshot;
+    final DataSnapshotPlatform? snap = snapshotData;
     if (snap == null) {
-      throw StateError(
-        'Transaction did not commit; snapshot is unavailable.',
-      );
+      throw StateError('Transaction did not commit; snapshot is unavailable.');
     }
     return snap;
   }

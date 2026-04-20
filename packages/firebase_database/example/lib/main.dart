@@ -12,25 +12,23 @@ import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
 
-// Change to false to use live database instance.
-const USE_DATABASE_EMULATOR = true;
+// Tizen currently does not support the Realtime Database emulator or on-device
+// persistence. Use the live database by default there.
+const USE_DATABASE_EMULATOR = !kIsWeb;
 // The port we've set the Firebase Database emulator to run on via the
 // `firebase.json` configuration file.
 const emulatorPort = 9000;
-// Android device emulators consider localhost of the host machine as 10.0.2.2
-// so let's use that if running on Android.
-final emulatorHost =
-    (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
-        ? '10.0.2.2'
-        : 'localhost';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  if (USE_DATABASE_EMULATOR) {
+  if (USE_DATABASE_EMULATOR && defaultTargetPlatform != TargetPlatform.linux) {
+    final String emulatorHost =
+        (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+            ? '10.0.2.2'
+            : DefaultFirebaseOptions.emulatorHost;
     FirebaseDatabase.instance.useDatabaseEmulator(emulatorHost, emulatorPort);
   }
 
@@ -77,7 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     database.setLoggingEnabled(false);
 
-    if (!kIsWeb) {
+    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux) {
       database.setPersistenceEnabled(true);
       database.setPersistenceCacheSizeBytes(10000000);
     }
@@ -190,15 +188,18 @@ class _MyHomePageState extends State<MyHomePage> {
             child: Center(
               child: _error == null
                   ? Text(
+                      key: const Key('database-counter-text'),
                       'Button tapped $_counter time${_counter == 1 ? '' : 's'}.\n\n'
                       'This includes all devices, ever.',
                     )
                   : Text(
+                      key: const Key('database-error-text'),
                       'Error retrieving button tap count:\n${_error!.message}',
                     ),
             ),
           ),
           ElevatedButton(
+            key: const Key('database-transaction-button'),
             onPressed: _incrementAsTransaction,
             child: const Text('Increment as transaction'),
           ),
@@ -219,10 +220,14 @@ class _MyHomePageState extends State<MyHomePage> {
                   sizeFactor: animation,
                   child: ListTile(
                     trailing: IconButton(
+                      key: Key('database-delete-$index'),
                       onPressed: () => _deleteMessage(snapshot),
                       icon: const Icon(Icons.delete),
                     ),
-                    title: Text('$index: ${snapshot.value.toString()}'),
+                    title: Text(
+                      '$index: ${snapshot.value.toString()}',
+                      key: Key('database-message-$index'),
+                    ),
                   ),
                 );
               },
@@ -231,6 +236,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        key: const Key('database-increment-button'),
         onPressed: _increment,
         tooltip: 'Increment',
         child: const Icon(Icons.add),

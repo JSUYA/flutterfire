@@ -56,3 +56,42 @@ await ref.push().set(<String, Object?>{
 * `startAfter` / `endBefore` cursor queries follow the `firebase_dart`
   semantics, which do not always match the native SDK byte-for-byte at the
   edges of mixed-type ranges.
+
+## Package structure
+
+* `lib/firebase_database_tizen.dart`: package entrypoint and registration hook.
+* `lib/src/firebase_database_tizen.dart`: `FirebaseDatabasePlatform` implementation.
+* `lib/src/database_reference_tizen.dart`: reference/query wrappers, transactions, and event adaptation.
+* `lib/src/data_snapshot_tizen.dart`: upstream-shaped snapshot mapping.
+* `lib/src/on_disconnect_tizen.dart`: `OnDisconnect` wrapper over the shared runtime.
+
+## Flow chart
+
+```mermaid
+flowchart TD
+  A[App builds DatabaseReference or Query] --> B[DatabaseReferenceTizen / QueryTizen]
+  B --> C[Apply query modifiers]
+  C --> D[Delegate to firebase_dart database API]
+  D --> E[Receive snapshot or stream event]
+  E --> F[Wrap in DataSnapshotTizen / DatabaseEventTizen]
+  F --> G[Return upstream firebase_database objects]
+```
+
+## Architecture chart
+
+```mermaid
+graph LR
+  App[Flutter app]
+  DBPkg[firebase_database_tizen]
+  Query[QueryTizen]
+  Ref[DatabaseReferenceTizen]
+  FD[firebase_dart database]
+  Core[firebase_core_tizen]
+
+  App --> DBPkg
+  DBPkg --> Query
+  DBPkg --> Ref
+  Query --> FD
+  Ref --> FD
+  DBPkg --> Core
+```

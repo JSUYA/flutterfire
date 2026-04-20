@@ -28,7 +28,7 @@ const emulatorPort = 9000;
 final emulatorHost =
     (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
         ? '10.0.2.2'
-        : 'localhost';
+        : DefaultFirebaseOptions.emulatorHost;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -52,5 +52,5 @@ void main() {
     setupOnDisconnectTests();
     // TODO(ehesp): Fix broken tests
     // runOnDisconnectTests();
-  });
+  }, skip: defaultTargetPlatform == TargetPlatform.linux);
 }

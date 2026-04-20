@@ -18,6 +18,11 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 
 class DefaultFirebaseOptions {
+  static const String _projectId = 'flutter-tizen-firebase-demo';
+  static const String _databaseUrl =
+      'https://flutter-tizen-firebase-demo-default-rtdb.firebaseio.com';
+  static const String _storageBucket = 'flutterfire-e2e-tests.appspot.com';
+
   static FirebaseOptions get currentPlatform {
     switch (defaultTargetPlatform) {
       case TargetPlatform.linux:
@@ -32,15 +37,18 @@ class DefaultFirebaseOptions {
   }
 
   static String get emulatorHost {
-    return 'PLACEHOLDER';
+    return const String.fromEnvironment(
+      'FIREBASE_EMULATOR_HOST',
+      defaultValue: 'localhost',
+    );
   }
 
   static const FirebaseOptions tizen = FirebaseOptions(
-    apiKey: 'PLACEHOLDER',
-    appId: 'PLACEHOLDER',
-    messagingSenderId: 'PLACEHOLDER',
-    projectId: 'PLACEHOLDER',
-    databaseURL: 'PLACEHOLDER',
-    storageBucket: 'PLACEHOLDER',
+    apiKey: 'test-api-key',
+    appId: '1:0000000000:tizen:database',
+    messagingSenderId: '0000000000',
+    projectId: _projectId,
+    databaseURL: _databaseUrl,
+    storageBucket: _storageBucket,
   );
 }
