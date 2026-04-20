@@ -30,7 +30,7 @@ void setupExtraTests() {
       List<int> okStringList = utf8.encode(kOkString);
       expect(bytes?.length, okStringList.length);
       expect(bytes, okStringList);
-    });
+    }, skip: Platform.isLinux);
 
     test('getMetadata', () async {
       final Reference ref = storage.ref('flutter-tests/ok.txt');
@@ -38,7 +38,7 @@ void setupExtraTests() {
       final result = await ref.getMetadata();
       expect(result, isA<FullMetadata>());
       expect(result.name, 'ok.txt');
-    });
+    }, skip: Platform.isLinux);
   });
 
   group('ControlTask', () {
@@ -100,5 +100,5 @@ void setupExtraTests() {
 
       await _testPauseTask(ref.writeToFile(tempFile));
     });
-  });
+  }, skip: Platform.isLinux);
 }

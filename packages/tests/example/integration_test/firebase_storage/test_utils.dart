@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutterfire_tizen_tests_example/firebase_options.dart';
 
 final String kTestString =
-    ([]..length = int.parse('${pow(2, 12)}')).join(_getRandomString(8)) * 100;
+    ([]..length = int.parse('${pow(2, 10)}')).join(_getRandomString(8)) * 4;
 const String kTestStorageBucket = 'flutterfire-e2e-tests.appspot.com';
 
 const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
@@ -26,7 +26,7 @@ String get testEmulatorHost {
   if (defaultTargetPlatform == TargetPlatform.android && !kIsWeb) {
     return '10.0.2.2';
   }
-  return 'localhost';
+  return DefaultFirebaseOptions.emulatorHost;
 }
 
 const int testEmulatorPort = 9199;

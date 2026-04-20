@@ -32,15 +32,15 @@ void setupTaskTests() {
 
       Future<void> _testPauseTask(String type) async {
         List<TaskSnapshot> snapshots = [];
-        late FirebaseException streamError;
+        FirebaseException? streamError;
         expect(task!.snapshot.state, TaskState.running);
 
         task!.snapshotEvents.listen(
           (TaskSnapshot snapshot) {
             snapshots.add(snapshot);
           },
-          onError: (error) {
-            streamError = error;
+          onError: (Object error) {
+            streamError = error as FirebaseException;
           },
           cancelOnError: true,
         );
@@ -218,15 +218,15 @@ void setupTaskTests() {
 
         Future<void> _testCancelTask() async {
           List<TaskSnapshot> snapshots = [];
-          late FirebaseException streamError;
+          FirebaseException? streamError;
           expect(task.snapshot.state, TaskState.running);
 
           task.snapshotEvents.listen(
             (TaskSnapshot snapshot) {
               snapshots.add(snapshot);
             },
-            onError: (error) {
-              streamError = error;
+            onError: (Object error) {
+              streamError = error as FirebaseException;
             },
             cancelOnError: true,
           );
@@ -246,7 +246,7 @@ void setupTaskTests() {
           expect(task.snapshot.state, TaskState.canceled);
 
           expect(streamError, isNotNull);
-          expect(streamError.code, 'canceled');
+          expect(streamError!.code, 'canceled');
           // Expecting there to only be running states, canceled should not get sent as an event.
           expect(
             snapshots.every((snapshot) => snapshot.state == TaskState.running),

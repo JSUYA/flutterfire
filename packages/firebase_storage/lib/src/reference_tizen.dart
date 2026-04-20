@@ -17,12 +17,10 @@ import 'task_tizen.dart';
 /// Tizen [ReferencePlatform] delegate.
 class ReferenceTizen extends ReferencePlatform {
   /// Creates a reference rooted at [fullPath] inside [storage].
-  ReferenceTizen(
-    FirebaseStorageTizen storage,
-    String fullPath,
-  )   : _storage = storage,
-        _client = storage.client,
-        super(storage, fullPath);
+  ReferenceTizen(FirebaseStorageTizen storage, String fullPath)
+    : _storage = storage,
+      _client = storage.client,
+      super(storage, fullPath);
 
   final FirebaseStorageTizen _storage;
   final StorageRestClient _client;
@@ -33,8 +31,7 @@ class ReferenceTizen extends ReferencePlatform {
 
   @override
   ReferencePlatform child(String path) {
-    final String joined =
-        p.posix.normalize(p.posix.join(fullPath, path));
+    final String joined = p.posix.normalize(p.posix.join(fullPath, path));
     return ReferenceTizen(_requireStorage, joined);
   }
 
@@ -44,10 +41,7 @@ class ReferenceTizen extends ReferencePlatform {
       return null;
     }
     final String parentPath = p.posix.dirname(fullPath);
-    return ReferenceTizen(
-      _requireStorage,
-      parentPath == '.' ? '' : parentPath,
-    );
+    return ReferenceTizen(_requireStorage, parentPath == '.' ? '' : parentPath);
   }
 
   @override
@@ -61,11 +55,15 @@ class ReferenceTizen extends ReferencePlatform {
     final BytesBuilder builder = BytesBuilder(copy: false);
     final StreamController<List<int>> controller =
         StreamController<List<int>>();
-    final StreamSubscription<List<int>> subscription =
-        controller.stream.listen(builder.add);
+    final StreamSubscription<List<int>> subscription = controller.stream.listen(
+      builder.add,
+    );
     try {
-      await _requireClient.download(fullPath, controller.sink,
-          maxSize: maxSize);
+      await _requireClient.download(
+        fullPath,
+        controller.sink,
+        maxSize: maxSize,
+      );
     } finally {
       await subscription.cancel();
       await controller.close();
@@ -74,13 +72,11 @@ class ReferenceTizen extends ReferencePlatform {
   }
 
   @override
-  Future<String> getDownloadURL() =>
-      _requireClient.getDownloadUrl(fullPath);
+  Future<String> getDownloadURL() => _requireClient.getDownloadUrl(fullPath);
 
   @override
   Future<FullMetadata> getMetadata() async {
-    final Map<String, Object?> raw =
-        await _requireClient.getMetadata(fullPath);
+    final Map<String, Object?> raw = await _requireClient.getMetadata(fullPath);
     return FullMetadata(Map<String, dynamic>.from(raw));
   }
 
@@ -135,10 +131,14 @@ class ReferenceTizen extends ReferencePlatform {
     if (rawPrefixes is List) {
       for (final Object? entry in rawPrefixes) {
         if (entry is String) {
-          prefixes.add(ReferenceTizen(
-            _requireStorage,
-            entry.endsWith('/') ? entry.substring(0, entry.length - 1) : entry,
-          ));
+          prefixes.add(
+            ReferenceTizen(
+              _requireStorage,
+              entry.endsWith('/')
+                  ? entry.substring(0, entry.length - 1)
+                  : entry,
+            ),
+          );
         }
       }
     }
@@ -151,7 +151,7 @@ class ReferenceTizen extends ReferencePlatform {
   }
 
   @override
-  TaskPlatform putBlob(Object data, [SettableMetadata? metadata]) {
+  TaskPlatform putBlob(dynamic data, [SettableMetadata? metadata]) {
     throw UnimplementedError(
       'putBlob is not supported by firebase_storage_tizen. Reason: Blob is a '
       'Web-only type; use putData (Uint8List) or putFile instead.',
@@ -216,8 +216,10 @@ class ReferenceTizen extends ReferencePlatform {
 
   @override
   Future<FullMetadata> updateMetadata(SettableMetadata metadata) async {
-    final Map<String, Object?> response =
-        await _requireClient.updateMetadata(fullPath, metadata.asMap());
+    final Map<String, Object?> response = await _requireClient.updateMetadata(
+      fullPath,
+      metadata.asMap(),
+    );
     return FullMetadata(Map<String, dynamic>.from(response));
   }
 }

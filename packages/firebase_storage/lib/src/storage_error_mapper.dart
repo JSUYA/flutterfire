@@ -17,10 +17,15 @@ class StorageErrorMapper {
     String? message,
   }) {
     final String mapped = _statusToCode(statusCode, code);
+    final String normalizedMessage = _normalizeMessage(
+      mapped,
+      message,
+      statusCode,
+    );
     return FirebaseException(
       plugin: 'firebase_storage',
       code: mapped,
-      message: message ?? 'Firebase Storage request failed ($statusCode).',
+      message: normalizedMessage,
     );
   }
 
@@ -56,5 +61,28 @@ class StorageErrorMapper {
       return serverCode.toLowerCase().replaceAll('_', '-');
     }
     return 'unknown';
+  }
+
+  static String _normalizeMessage(
+    String code,
+    String? message,
+    int statusCode,
+  ) {
+    if (message != null && message.isNotEmpty) {
+      if (code == 'unauthorized' && message == 'Permission denied.') {
+        return 'User is not authorized to perform the desired action.';
+      }
+      return message;
+    }
+    switch (code) {
+      case 'unauthorized':
+        return 'User is not authorized to perform the desired action.';
+      case 'object-not-found':
+        return 'No object exists at the desired reference.';
+      case 'canceled':
+        return 'The operation was canceled.';
+      default:
+        return 'Firebase Storage request failed ($statusCode).';
+    }
   }
 }

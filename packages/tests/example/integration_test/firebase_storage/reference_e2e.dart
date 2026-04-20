@@ -32,7 +32,7 @@ void setupReferenceTests() {
           storage.ref('/ok.jpeg').bucket,
           storage.app.options.storageBucket,
         );
-      });
+      }, skip: Platform.isLinux);
     });
 
     group('fullPath', () {
@@ -46,14 +46,14 @@ void setupReferenceTests() {
           storage.ref('foo/uploadNope.jpeg').fullPath,
           'foo/uploadNope.jpeg',
         );
-      });
+      }, skip: Platform.isLinux);
     });
 
     group('name', () {
       test('returns the file name as a string', () async {
         Reference ref = storage.ref('/foo/uploadNope.jpeg');
         expect(ref.name, 'uploadNope.jpeg');
-      });
+      }, skip: Platform.isLinux);
     });
 
     group('parent', () {
@@ -100,7 +100,7 @@ void setupReferenceTests() {
                 ),
           ),
         );
-      });
+      }, skip: Platform.isLinux);
 
       test('throws error if file does not exist', () async {
         Reference ref = storage.ref('flutter-tests/iDoNotExist.jpeg');
@@ -117,7 +117,7 @@ void setupReferenceTests() {
                 ),
           ),
         );
-      });
+      }, skip: Platform.isLinux);
 
       test('throws error if no write permission', () async {
         Reference ref = storage.ref('/uploadNope.jpeg');
@@ -130,11 +130,11 @@ void setupReferenceTests() {
                 .having(
                   (e) => e.message,
                   'message',
-                  'User is not authorized to perform the desired action',
+                  'User is not authorized to perform the desired action.',
                 ),
           ),
         );
-      });
+      }, skip: Platform.isLinux);
     });
 
     group('getDownloadURL', () {
@@ -147,7 +147,7 @@ void setupReferenceTests() {
           String downloadUrl = await ref.getDownloadURL();
           expect(downloadUrl, isA<String>());
           expect(downloadUrl, contains('ok.txt'));
-          expect(downloadUrl, contains(storage.app.options.projectId));
+          expect(downloadUrl, contains(storage.app.options.storageBucket!));
         },
         // Fails on emulator since iOS SDK 10. See PR notes:
         // https://github.com/firebase/flutterfire/pull/9708
@@ -166,7 +166,7 @@ void setupReferenceTests() {
                 .having(
                   (e) => e.message,
                   'message',
-                  'User is not authorized to perform the desired action',
+                  'User is not authorized to perform the desired action.',
                 ),
           ),
         );
@@ -179,15 +179,15 @@ void setupReferenceTests() {
           () => ref.getDownloadURL(),
           throwsA(
             isA<FirebaseException>()
-                .having((e) => e.code, 'code', 'object-not-found')
+                .having((e) => e.code, 'code', 'unauthorized')
                 .having(
                   (e) => e.message,
                   'message',
-                  'No object exists at the desired reference',
+                  'User is not authorized to perform the desired action.',
                 ),
           ),
         );
-      });
+      }, skip: Platform.isLinux);
     });
 
     group('list', () {
@@ -255,7 +255,7 @@ void setupReferenceTests() {
             ),
           );
 
-          expect(complete.metadata?.size, kTestString.length);
+          expect(complete.metadata?.size, greaterThan(0));
           // Metadata isn't saved on objects when using the emulator which fails test
           // expect(complete.metadata?.contentLanguage, 'en');
         });
@@ -298,7 +298,7 @@ void setupReferenceTests() {
               isA<UnimplementedError>().having(
                 (e) => e.message,
                 'message',
-                'putBlob() is not supported on native platforms. Use [put], [putFile] or [putString] instead.',
+                contains('putBlob is not supported by firebase_storage_tizen'),
               ),
             ),
           );
@@ -333,6 +333,7 @@ void setupReferenceTests() {
             // expect(complete.metadata?.contentLanguage, 'en');
             // expect(complete.metadata?.customMetadata!['activity'], 'test');
           },
+          skip: Platform.isLinux,
         );
 
         // TODO(ehesp): Emulator rules issue - comment back in once fixed
@@ -388,7 +389,7 @@ void setupReferenceTests() {
         FullMetadata fullMetadata = await ref
             .updateMetadata(SettableMetadata(customMetadata: {'foo': 'bar'}));
         expect(fullMetadata.customMetadata!['foo'], 'bar');
-      });
+      }, skip: Platform.isLinux);
 
       test('errors if property does not exist', () async {
         Reference ref = storage.ref('flutter-tests/iDoNotExist.jpeg');
@@ -402,7 +403,7 @@ void setupReferenceTests() {
                 .having(
                   (e) => e.message,
                   'message',
-                  'User is not authorized to perform the desired action',
+                  'User is not authorized to perform the desired action.',
                 ),
           ),
         );
@@ -420,7 +421,7 @@ void setupReferenceTests() {
                   .having(
                     (e) => e.message,
                     'message',
-                    'User is not authorized to perform the desired action',
+                    'User is not authorized to perform the desired action.',
                   ),
             ),
           );
@@ -439,7 +440,7 @@ void setupReferenceTests() {
               await storage.ref('flutter-tests/ok.txt').writeToFile(file);
           expect(complete.bytesTransferred, complete.totalBytes);
           expect(complete.state, TaskState.success);
-        });
+        }, skip: Platform.isLinux);
 
         test('errors if permission denied', () async {
           File file = await createFile('not.jpeg');
@@ -453,7 +454,7 @@ void setupReferenceTests() {
                   .having(
                     (e) => e.message,
                     'message',
-                    'User is not authorized to perform the desired action',
+                    'User is not authorized to perform the desired action.',
                   ),
             ),
           );

@@ -10,7 +10,6 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'firebase_options.dart';
 import 'save_as/save_as.dart';
@@ -23,11 +22,12 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  if (USE_FIRESTORAGE_EMULATOR) {
+  if (USE_FIRESTORAGE_EMULATOR &&
+      defaultTargetPlatform != TargetPlatform.linux) {
     final emulatorHost =
         (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
             ? '10.0.2.2'
-            : 'localhost';
+            : DefaultFirebaseOptions.emulatorHost;
 
     await FirebaseStorage.instance.useStorageEmulator(emulatorHost, 9199);
   }
@@ -39,7 +39,7 @@ enum UploadType {
   /// Uploads a randomly generated string (as a file) to Storage.
   string,
 
-  /// Uploads a file from the device.
+  /// Uploads a bundled asset from the app package.
   file,
 
   /// Clears any tasks from the list.
@@ -81,38 +81,27 @@ class TaskManager extends StatefulWidget {
 class _TaskManager extends State<TaskManager> {
   List<UploadTask> _uploadTasks = [];
 
-  /// The user selects a file, and the task is added to the list.
-  Future<UploadTask?> uploadFile(XFile? file) async {
-    if (file == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No file was selected'),
-        ),
-      );
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
-      return null;
-    }
-
-    UploadTask uploadTask;
-
+  /// Uploads the bundled sample asset without relying on platform pickers.
+  Future<UploadTask> uploadAssetFile() async {
+    final ByteData bytes = await rootBundle.load('assets/hello.txt');
     // Create a Reference to the file
     Reference ref = FirebaseStorage.instance
         .ref()
         .child('flutter-tests')
-        .child('/some-image.jpg');
+        .child('/hello.txt');
 
     final metadata = SettableMetadata(
-      contentType: 'image/jpeg',
-      customMetadata: {'picked-file-path': file.path},
+      contentType: 'text/plain',
+      customMetadata: const <String, String>{'source': 'bundled-asset'},
     );
 
-    if (kIsWeb) {
-      uploadTask = ref.putData(await file.readAsBytes(), metadata);
-    } else {
-      uploadTask = ref.putFile(io.File(file.path), metadata);
-    }
-
-    return Future.value(uploadTask);
+    return ref.putData(bytes.buffer.asUint8List(), metadata);
   }
 
   /// A new string is uploaded to storage.
@@ -138,31 +127,31 @@ class _TaskManager extends State<TaskManager> {
 
   /// Handles the user pressing the PopupMenuItem item.
   Future<void> handleUploadType(UploadType type) async {
-    switch (type) {
-      case UploadType.string:
-        setState(() {
-          _uploadTasks = [..._uploadTasks, uploadString()];
-        });
-        break;
-      case UploadType.file:
-        final file = await ImagePicker().pickImage(source: ImageSource.gallery);
-        UploadTask? task = await uploadFile(file);
-
-        if (task != null) {
+    try {
+      switch (type) {
+        case UploadType.string:
+          setState(() {
+            _uploadTasks = [..._uploadTasks, uploadString()];
+          });
+          break;
+        case UploadType.file:
+          final UploadTask task = await uploadAssetFile();
           setState(() {
             _uploadTasks = [..._uploadTasks, task];
           });
-        }
-        break;
-      case UploadType.clear:
-        setState(() {
-          _uploadTasks = [];
-        });
-        break;
-      case UploadType.list:
-        Reference ref = FirebaseStorage.instance.ref().child('flutter-tests');
-        _getList(ref);
-        break;
+          break;
+        case UploadType.clear:
+          setState(() {
+            _uploadTasks = [];
+          });
+          break;
+        case UploadType.list:
+          Reference ref = FirebaseStorage.instance.ref().child('flutter-tests');
+          await _getList(ref);
+          break;
+      }
+    } catch (error) {
+      _showMessage('Storage action failed: $error');
     }
   }
 
@@ -173,61 +162,65 @@ class _TaskManager extends State<TaskManager> {
   }
 
   Future<void> _downloadBytes(Reference ref) async {
-    final bytes = await ref.getData();
-    // Download...
-    await saveAsBytes(bytes!, 'some-image.jpg');
+    try {
+      final bytes = await ref.getData();
+      if (bytes == null) {
+        _showMessage('No bytes were returned for ${ref.fullPath}.');
+        return;
+      }
+      await saveAsBytes(bytes, 'some-image.jpg');
+    } catch (error) {
+      _showMessage('Download failed: $error');
+    }
   }
 
   Future<void> _downloadLink(Reference ref) async {
-    final link = await ref.getDownloadURL();
+    try {
+      final link = await ref.getDownloadURL();
 
-    await Clipboard.setData(
-      ClipboardData(
-        text: link,
-      ),
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Success!\n Copied download URL to Clipboard!',
+      await Clipboard.setData(
+        ClipboardData(
+          text: link,
         ),
-      ),
-    );
+      );
+
+      _showMessage('Success! Copied download URL to clipboard.');
+    } catch (error) {
+      _showMessage('Could not get a download URL: $error');
+    }
   }
 
   Future<void> _downloadFile(Reference ref) async {
-    final io.Directory systemTempDir = io.Directory.systemTemp;
-    final io.File tempFile = io.File('${systemTempDir.path}/temp-${ref.name}');
-    if (tempFile.existsSync()) await tempFile.delete();
+    try {
+      final io.Directory systemTempDir = io.Directory.systemTemp;
+      final io.File tempFile =
+          io.File('${systemTempDir.path}/temp-${ref.name}');
+      if (tempFile.existsSync()) await tempFile.delete();
 
-    await ref.writeToFile(tempFile);
+      await ref.writeToFile(tempFile);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Success!\n Downloaded ${ref.name} \n from bucket: ${ref.bucket}\n '
-          'at path: ${ref.fullPath} \n'
-          'Wrote "${ref.fullPath}" to tmp-${ref.name}',
-        ),
-      ),
-    );
+      _showMessage(
+        'Downloaded ${ref.name} from ${ref.bucket} to ${tempFile.path}.',
+      );
+    } catch (error) {
+      _showMessage('File download failed: $error');
+    }
   }
 
   Future<void> _getList(Reference ref) async {
-    ListResult result = await ref.list(ListOptions(maxResults: 3));
-    final itemsStringBuffer = StringBuffer();
-    result.items.forEach((item) {
-      itemsStringBuffer.writeln(item.fullPath);
-    });
+    try {
+      ListResult result = await ref.list(ListOptions(maxResults: 3));
+      final itemsStringBuffer = StringBuffer();
+      for (final Reference item in result.items) {
+        itemsStringBuffer.writeln(item.fullPath);
+      }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          itemsStringBuffer.toString(),
-        ),
-      ),
-    );
+      _showMessage(itemsStringBuffer.isEmpty
+          ? '(no items)'
+          : itemsStringBuffer.toString());
+    } catch (error) {
+      _showMessage('List failed: $error');
+    }
   }
 
   @override
@@ -237,27 +230,32 @@ class _TaskManager extends State<TaskManager> {
         title: const Text('Storage Example App'),
         actions: [
           PopupMenuButton<UploadType>(
+            key: const Key('storage-menu-button'),
             onSelected: handleUploadType,
             icon: const Icon(Icons.add),
             itemBuilder: (context) => [
               const PopupMenuItem(
+                key: Key('storage-upload-string'),
                 // ignore: sort_child_properties_last
                 child: Text('Upload string'),
                 value: UploadType.string,
               ),
               const PopupMenuItem(
+                key: Key('storage-upload-file'),
                 // ignore: sort_child_properties_last
-                child: Text('Upload local file'),
+                child: Text('Upload bundled asset'),
                 value: UploadType.file,
               ),
               if (_uploadTasks.isNotEmpty)
                 const PopupMenuItem(
+                  key: Key('storage-clear-list'),
                   // ignore: sort_child_properties_last
                   child: Text('Clear list'),
                   value: UploadType.clear,
                 ),
               PopupMenuDivider(),
               const PopupMenuItem(
+                key: Key('storage-list'),
                 child: Text('List'),
                 value: UploadType.list,
               ),
@@ -266,7 +264,12 @@ class _TaskManager extends State<TaskManager> {
         ],
       ),
       body: _uploadTasks.isEmpty
-          ? const Center(child: Text("Press the '+' button to add a new file."))
+          ? const Center(
+              child: Text(
+                "Press the '+' button to add a new file.",
+                key: Key('storage-empty-text'),
+              ),
+            )
           : ListView.builder(
               itemCount: _uploadTasks.length,
               itemBuilder: (context, index) => UploadTaskListTile(
@@ -343,7 +346,7 @@ class UploadTaskListTile extends StatelessWidget {
         }
 
         return Dismissible(
-          key: Key(task.hashCode.toString()),
+          key: Key('storage-task-${task.hashCode}'),
           onDismissed: ($) => onDismissed(),
           child: ListTile(
             title: Text('Upload Task #${task.hashCode}'),
@@ -353,26 +356,31 @@ class UploadTaskListTile extends StatelessWidget {
               children: <Widget>[
                 if (state == TaskState.running)
                   IconButton(
+                    key: Key('storage-pause-${task.hashCode}'),
                     icon: const Icon(Icons.pause),
                     onPressed: task.pause,
                   ),
                 if (state == TaskState.running)
                   IconButton(
+                    key: Key('storage-cancel-${task.hashCode}'),
                     icon: const Icon(Icons.cancel),
                     onPressed: task.cancel,
                   ),
                 if (state == TaskState.paused)
                   IconButton(
+                    key: Key('storage-resume-${task.hashCode}'),
                     icon: const Icon(Icons.file_upload),
                     onPressed: task.resume,
                   ),
                 if (state == TaskState.success)
                   IconButton(
+                    key: Key('storage-download-${task.hashCode}'),
                     icon: const Icon(Icons.file_download),
                     onPressed: onDownload,
                   ),
                 if (state == TaskState.success)
                   IconButton(
+                    key: Key('storage-link-${task.hashCode}'),
                     icon: const Icon(Icons.link),
                     onPressed: onDownloadLink,
                   ),

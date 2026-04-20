@@ -58,3 +58,48 @@ path duplication bug](https://github.com/appsup-dart/firebase_dart/issues/50).
 * `putBlob` is web-only; Tizen callers should use `putData` / `putFile`.
 * Custom download-token issuance is not part of the public Storage API —
   pre-mint tokens in the Firebase console or the Admin SDK.
+
+## Package structure
+
+* `lib/firebase_storage_tizen.dart`: public package registration.
+* `lib/src/firebase_storage_tizen.dart`: `FirebaseStoragePlatform` implementation and instance caching.
+* `lib/src/reference_tizen.dart`: reference tree, metadata conversion, and task creation.
+* `lib/src/storage_rest_client.dart`: direct REST client for metadata, uploads, downloads, and listing.
+* `lib/src/task_tizen.dart`: upload/download task state machine surfaced as upstream `TaskPlatform`.
+* `lib/src/storage_error_mapper.dart`: HTTP/storage error normalization into FlutterFire error codes.
+
+## Flow chart
+
+```mermaid
+flowchart TD
+  A[App calls putData/getData/list/getMetadata] --> B[ReferenceTizen]
+  B --> C[StorageRestClient]
+  C --> D[TizenHttpClient attaches auth headers]
+  D --> E[Firebase Storage REST endpoint]
+  E --> F[Normalize metadata and errors]
+  F --> G[Return metadata, bytes, list results, or task snapshots]
+```
+
+## Architecture chart
+
+```mermaid
+graph LR
+  App[Flutter app]
+  StoragePkg[firebase_storage_tizen]
+  Ref[ReferenceTizen]
+  Task[TaskTizen]
+  Rest[StorageRestClient]
+  Http[TizenHttpClient]
+  Auth[TizenAuthContext]
+  GCS[Firebase Storage REST]
+  Core[firebase_core_tizen]
+
+  App --> StoragePkg
+  StoragePkg --> Ref
+  Ref --> Task
+  Ref --> Rest
+  Rest --> Http
+  Http --> Auth
+  Rest --> GCS
+  StoragePkg --> Core
+```

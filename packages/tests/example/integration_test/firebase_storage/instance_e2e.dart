@@ -241,10 +241,9 @@ void setupInstanceTests() {
     });
 
     test('toString', () {
-      // flutterfire-e2e-tests.appspot.com -> mytest-16eac.appspot.com
       expect(
         storage.toString(),
-        'FirebaseStorage(app: [DEFAULT], bucket: mytest-16eac.appspot.com)',
+        'FirebaseStorage(app: [DEFAULT], bucket: flutterfire-e2e-tests.appspot.com)',
       );
     });
   });

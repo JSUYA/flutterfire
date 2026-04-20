@@ -10,6 +10,7 @@ import 'dart:math';
 import 'package:firebase_core_tizen/firebase_core_tizen.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
+import 'package:path/path.dart' as p;
 
 import 'storage_error_mapper.dart';
 
@@ -17,7 +18,7 @@ import 'storage_error_mapper.dart';
 const int kResumableChunkSizeBytes = 256 * 1024;
 
 /// Threshold above which uploads switch to the resumable protocol.
-const int kResumableUploadThresholdBytes = 8 * 1024 * 1024;
+const int kResumableUploadThresholdBytes = 256 * 1024;
 
 /// Thin REST client for Firebase Storage.
 ///
@@ -43,6 +44,8 @@ class StorageRestClient {
 
   /// API host; override in tests or for emulator (not currently supported).
   final String host;
+  final Map<String, Map<String, Object?>> _metadataCache =
+      <String, Map<String, Object?>>{};
 
   Uri _objectUri(String path, {Map<String, String>? query}) {
     final String encoded = Uri.encodeComponent(path);
@@ -56,11 +59,7 @@ class StorageRestClient {
     });
   }
 
-  Uri _listUri({
-    String? prefix,
-    String? pageToken,
-    int? maxResults,
-  }) {
+  Uri _listUri({String? prefix, String? pageToken, int? maxResults}) {
     return Uri.https(host, '/v0/b/$bucket/o', <String, String>{
       if (prefix != null) 'prefix': prefix,
       'delimiter': '/',
@@ -85,12 +84,18 @@ class StorageRestClient {
 
   /// Retrieves object metadata.
   Future<Map<String, Object?>> getMetadata(String path) async {
+    final Map<String, Object?>? cached = _metadataCache[path];
+    if (cached != null) {
+      return Map<String, Object?>.from(cached);
+    }
     try {
-      return await TizenHttpClient.instance.sendJson(
-        method: 'GET',
-        url: _objectUri(path),
-        headers: await _authHeaders(),
-      );
+      final Map<String, Object?> response = await TizenHttpClient.instance
+          .sendJson(
+            method: 'GET',
+            url: _objectUri(path),
+            headers: await _authHeaders(),
+          );
+      return _rememberMetadata(path, response);
     } on TizenFirebaseHttpException catch (e) {
       throw StorageErrorMapper.fromHttpException(e);
     }
@@ -102,12 +107,14 @@ class StorageRestClient {
     Map<String, Object?> metadata,
   ) async {
     try {
-      return await TizenHttpClient.instance.sendJson(
-        method: 'PATCH',
-        url: _objectUri(path),
-        headers: await _authHeaders(),
-        body: metadata,
-      );
+      final Map<String, Object?> response = await TizenHttpClient.instance
+          .sendJson(
+            method: 'PATCH',
+            url: _objectUri(path),
+            headers: await _authHeaders(),
+            body: metadata,
+          );
+      return _rememberMetadata(path, response);
     } on TizenFirebaseHttpException catch (e) {
       throw StorageErrorMapper.fromHttpException(e);
     }
@@ -121,6 +128,7 @@ class StorageRestClient {
         url: _objectUri(path),
         headers: await _authHeaders(),
       );
+      _metadataCache.remove(path);
     } on TizenFirebaseHttpException catch (e) {
       throw StorageErrorMapper.fromHttpException(e);
     }
@@ -158,10 +166,10 @@ class StorageRestClient {
       );
     }
     final String firstToken = tokens.split(',').first;
-    return _objectUri(path, query: <String, String>{
-      'alt': 'media',
-      'token': firstToken,
-    }).toString();
+    return _objectUri(
+      path,
+      query: <String, String>{'alt': 'media', 'token': firstToken},
+    ).toString();
   }
 
   /// Streams the object body to [sink] up to [maxSize] bytes.
@@ -176,18 +184,18 @@ class StorageRestClient {
     final Map<String, Object?> metadata = await getMetadata(path);
     final String? tokens = metadata['downloadTokens'] as String?;
     final String? token = tokens?.split(',').firstOrNull;
-    final Uri url = _objectUri(path, query: <String, String>{
-      'alt': 'media',
-      if (token != null) 'token': token,
-    });
+    final Uri url = _objectUri(
+      path,
+      query: <String, String>{
+        'alt': 'media',
+        if (token != null) 'token': token,
+      },
+    );
     final http.StreamedResponse response = await TizenHttpClient.instance
         .sendStreamed(method: 'GET', url: url, headers: await _authHeaders());
     if (response.statusCode >= 300) {
       final String body = await response.stream.bytesToString();
-      throw StorageErrorMapper.map(
-        response.statusCode,
-        message: body,
-      );
+      throw StorageErrorMapper.map(response.statusCode, message: body);
     }
     int received = 0;
     await for (final List<int> chunk in response.stream) {
@@ -224,11 +232,13 @@ class StorageRestClient {
     };
     final String? bodyContentType = metadata?['contentType'] as String?;
     final List<int> body = <int>[
-      ...utf8.encode('--$boundary\r\n'
-          'Content-Type: application/json; charset=UTF-8\r\n\r\n'
-          '${jsonEncode(meta)}\r\n'
-          '--$boundary\r\n'
-          'Content-Type: ${bodyContentType ?? 'application/octet-stream'}\r\n\r\n'),
+      ...utf8.encode(
+        '--$boundary\r\n'
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n'
+        '${jsonEncode(meta)}\r\n'
+        '--$boundary\r\n'
+        'Content-Type: ${bodyContentType ?? 'application/octet-stream'}\r\n\r\n',
+      ),
       ...data,
       ...utf8.encode('\r\n--$boundary--\r\n'),
     ];
@@ -236,8 +246,7 @@ class StorageRestClient {
     try {
       // Must go through sendRaw: sendJson would overwrite the
       // multipart Content-Type header and jsonEncode the bytes.
-      final http.Response response =
-          await TizenHttpClient.instance.sendRaw(
+      final http.Response response = await TizenHttpClient.instance.sendRaw(
         method: 'POST',
         url: _uploadUri(path, uploadType: 'multipart'),
         headers: await _authHeaders(
@@ -252,7 +261,7 @@ class StorageRestClient {
       }
       final Object? decoded = jsonDecode(response.body);
       if (decoded is Map<String, Object?>) {
-        return decoded;
+        return _rememberMetadata(path, decoded);
       }
       throw StorageErrorMapper.map(
         response.statusCode,
@@ -265,8 +274,7 @@ class StorageRestClient {
 
   String _generateBoundary() {
     final Random rand = Random.secure();
-    final List<int> bytes =
-        List<int>.generate(24, (_) => rand.nextInt(256));
+    final List<int> bytes = List<int>.generate(24, (_) => rand.nextInt(256));
     return 'tizen-${bytes.map((int b) => b.toRadixString(16).padLeft(2, '0')).join()}';
   }
 
@@ -329,16 +337,16 @@ class StorageRestClient {
         method: 'PUT',
         url: sessionUri,
         headers: <String, String>{
-          'X-Goog-Upload-Command':
-              isFinal ? 'upload, finalize' : 'upload',
+          'X-Goog-Upload-Command': isFinal ? 'upload, finalize' : 'upload',
           'X-Goog-Upload-Offset': '$byteOffset',
         },
         body: chunk,
         allowStatuses: const <int>{308},
       );
-      final String? uploadStatus =
-          response.headers['x-goog-upload-status']?.toLowerCase();
-      final bool completed = response.statusCode == 200 ||
+      final String? uploadStatus = response.headers['x-goog-upload-status']
+          ?.toLowerCase();
+      final bool completed =
+          response.statusCode == 200 ||
           response.statusCode == 201 ||
           uploadStatus == 'final';
       if (completed && response.body.isNotEmpty) {
@@ -351,6 +359,52 @@ class StorageRestClient {
     } on TizenFirebaseHttpException catch (e) {
       throw StorageErrorMapper.fromHttpException(e);
     }
+  }
+
+  Map<String, Object?> _rememberMetadata(
+    String path,
+    Map<String, Object?> raw,
+  ) {
+    final Map<String, Object?> normalized = _normalizeMetadata(path, raw);
+    _metadataCache[path] = normalized;
+    return Map<String, Object?>.from(normalized);
+  }
+
+  Map<String, Object?> _normalizeMetadata(
+    String path,
+    Map<String, Object?> raw,
+  ) {
+    int? _intValue(Object? value) {
+      if (value is int) {
+        return value;
+      }
+      if (value is String) {
+        return int.tryParse(value);
+      }
+      return null;
+    }
+
+    int? _millis(Object? value) {
+      if (value is int) {
+        return value;
+      }
+      if (value is String) {
+        final DateTime? parsed = DateTime.tryParse(value);
+        return parsed?.millisecondsSinceEpoch;
+      }
+      return null;
+    }
+
+    final String fullPath = (raw['name'] as String?) ?? path;
+    return <String, Object?>{
+      ...raw,
+      'name': p.posix.basename(fullPath),
+      'fullPath': fullPath,
+      'size': _intValue(raw['size']),
+      'customMetadata': raw['metadata'],
+      'creationTimeMillis': _millis(raw['timeCreated']),
+      'updatedTimeMillis': _millis(raw['updated']),
+    };
   }
 }
 
