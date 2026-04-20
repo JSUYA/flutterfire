@@ -54,3 +54,43 @@ print(FirebaseRemoteConfig.instance.getString('greeting'));
   contract. Behaviour may change without notice; `ETag` + `304 Not Modified`
   fallback keeps the last-known config in place if the server response
   shape drifts.
+
+## Package structure
+
+* `lib/firebase_remote_config_tizen.dart`: registration entrypoint.
+* `lib/src/firebase_remote_config_tizen_impl.dart`: `FirebaseRemoteConfigPlatform` implementation, defaults, cache, and fetch lifecycle.
+* `lib/src/remote_config_rest_client.dart`: REST transport to the fetch endpoint.
+* `lib/src/remote_config_value.dart`: upstream value conversion helpers.
+
+## Flow chart
+
+```mermaid
+flowchart TD
+  A[App calls fetchAndActivate] --> B[FirebaseRemoteConfigTizen]
+  B --> C[Load defaults and cached ETag]
+  C --> D[Request FID and installation token]
+  D --> E[RemoteConfigRestClient.fetch]
+  E --> F[304 keep cache or parse new config]
+  F --> G[Activate values in memory]
+  G --> H[App reads getString/getBool/getInt]
+```
+
+## Architecture chart
+
+```mermaid
+graph LR
+  App[Flutter app]
+  RCPkg[firebase_remote_config_tizen]
+  Inst[firebase_app_installations_tizen]
+  Rest[RemoteConfigRestClient]
+  Http[TizenHttpClient]
+  RC[Remote Config fetch endpoint]
+  Core[firebase_core_tizen]
+
+  App --> RCPkg
+  RCPkg --> Inst
+  RCPkg --> Rest
+  Rest --> Http
+  Rest --> RC
+  RCPkg --> Core
+```

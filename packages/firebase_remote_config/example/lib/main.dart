@@ -3,9 +3,18 @@
 // found in the LICENSE file.
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(const RemoteConfigExampleApp());
+import 'firebase_options.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const RemoteConfigExampleApp());
+}
 
 /// Example app demonstrating fetch / activate / get.
 class RemoteConfigExampleApp extends StatefulWidget {
@@ -20,10 +29,14 @@ class _RemoteConfigExampleAppState extends State<RemoteConfigExampleApp> {
   String _greeting = '(defaults not loaded yet)';
 
   Future<void> _refresh() async {
-    final FirebaseRemoteConfig rc = FirebaseRemoteConfig.instance;
-    await rc.setDefaults(<String, Object?>{'greeting': 'Hi from Tizen'});
-    await rc.fetchAndActivate();
-    setState(() => _greeting = rc.getString('greeting'));
+    try {
+      final FirebaseRemoteConfig rc = FirebaseRemoteConfig.instance;
+      await rc.setDefaults(<String, Object?>{'greeting': 'Hi from Tizen'});
+      await rc.fetchAndActivate();
+      setState(() => _greeting = rc.getString('greeting'));
+    } catch (error) {
+      setState(() => _greeting = 'error: $error');
+    }
   }
 
   @override
@@ -38,8 +51,12 @@ class _RemoteConfigExampleAppState extends State<RemoteConfigExampleApp> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Text('greeting: $_greeting'),
+              Text(
+                'greeting: $_greeting',
+                key: const Key('remote-config-greeting'),
+              ),
               ElevatedButton(
+                key: const Key('remote-config-refresh'),
                 onPressed: _refresh,
                 child: const Text('fetchAndActivate()'),
               ),

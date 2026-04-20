@@ -93,14 +93,14 @@ class FirebaseRemoteConfigTizen extends FirebaseRemoteConfigPlatform {
 
   @override
   Future<void> fetch() async {
-    if (DateTime.now().difference(_lastFetch) < _settings.minimumFetchInterval) {
+    if (DateTime.now().difference(_lastFetch) <
+        _settings.minimumFetchInterval) {
       _status = RemoteConfigFetchStatus.throttle;
       return;
     }
     try {
-      final String installationId =
-          await _installations.getId();
-      final String installationToken = await _installations.getToken();
+      final String installationId = await _installations.getId();
+      final String installationToken = await _installations.getToken(false);
       final RemoteConfigFetchResponse response = await _restClient.fetch(
         installationId: installationId,
         installationToken: installationToken,
@@ -153,7 +153,9 @@ class FirebaseRemoteConfigTizen extends FirebaseRemoteConfigPlatform {
   RemoteConfigSettings get settings => _settings;
 
   @override
-  Future<void> setConfigSettings(RemoteConfigSettings remoteConfigSettings) async {
+  Future<void> setConfigSettings(
+    RemoteConfigSettings remoteConfigSettings,
+  ) async {
     _settings = remoteConfigSettings;
   }
 
