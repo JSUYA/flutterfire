@@ -44,3 +44,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+dependency_overrides:
+  firebase_app_installations_tizen:
+    path: ../../firebase_app_installations
+  firebase_core_tizen:
+    path: ../../firebase_core
+  firebase_core_platform_interface: 4.8.0
