@@ -59,3 +59,45 @@ final HttpsCallable gen2 = FirebaseFunctions.instance.httpsCallableFromUrl(
   DeviceCheck / reCAPTCHA provider; enable App Check custom-provider
   enforcement in your Functions only if your backend accepts
   server-minted custom tokens.
+
+## Package structure
+
+* `lib/cloud_functions_tizen.dart`: public registration entrypoint.
+* `lib/src/firebase_functions_tizen.dart`: `FirebaseFunctionsPlatform` implementation and region/app scoping.
+* `lib/src/https_callable_tizen.dart`: callable wrapper and payload encoding.
+* `lib/src/functions_rest_client.dart`: direct HTTPS transport for gen1/gen2 callable endpoints.
+* `lib/src/codec.dart`: upstream-compatible argument/result normalization.
+
+## Flow chart
+
+```mermaid
+flowchart TD
+  A[App calls httpsCallable or httpsCallableFromUrl] --> B[HttpsCallableTizen]
+  B --> C[Encode payload with Functions codec]
+  C --> D[TizenHttpClient attaches auth headers]
+  D --> E[Callable HTTPS endpoint]
+  E --> F[Decode success or error envelope]
+  F --> G[Return HttpsCallableResult or FirebaseFunctionsException]
+```
+
+## Architecture chart
+
+```mermaid
+graph LR
+  App[Flutter app]
+  FuncPkg[cloud_functions_tizen]
+  Callable[HttpsCallableTizen]
+  Rest[FunctionsRestClient]
+  Http[TizenHttpClient]
+  Auth[TizenAuthContext]
+  Endpoint[Cloud Functions callable endpoint]
+  Core[firebase_core_tizen]
+
+  App --> FuncPkg
+  FuncPkg --> Callable
+  Callable --> Rest
+  Rest --> Http
+  Http --> Auth
+  Rest --> Endpoint
+  FuncPkg --> Core
+```

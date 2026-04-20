@@ -5,11 +5,14 @@
 import 'dart:core';
 
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:cloud_functions_example/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'firebase_options.dart';
+
 String kEmulatorHost = DefaultFirebaseOptions.emulatorHost;
+const bool kUseFunctionsEmulator = false;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +23,9 @@ Future<void> main() async {
 
   // You should have the Functions Emulator running locally to use it
   // https://firebase.google.com/docs/functions/local-emulator
-  FirebaseFunctions.instance.useFunctionsEmulator(kEmulatorHost, 5001);
+  if (kUseFunctionsEmulator && defaultTargetPlatform != TargetPlatform.linux) {
+    FirebaseFunctions.instance.useFunctionsEmulator(kEmulatorHost, 5001);
+  }
 
   runApp(MyApp());
 }
@@ -42,17 +47,33 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Firebase Functions Example'),
         ),
         body: Center(
-          child: ListView.builder(
-            itemCount: fruit.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                title: Text('${fruit[index]}'),
-              );
-            },
+          child: Column(
+            children: <Widget>[
+              if (!kUseFunctionsEmulator)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'This example calls a deployed function by default. '
+                    'The local Functions emulator is unsupported on Tizen.',
+                  ),
+                ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: fruit.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text('${fruit[index]}',
+                          key: Key('functions-item-$index')),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
         floatingActionButton: Builder(
           builder: (context) => FloatingActionButton.extended(
+            key: const Key('functions-call-button'),
             onPressed: () async {
               // See index.js in .github/workflows/scripts for the example function we
               // are using for this example

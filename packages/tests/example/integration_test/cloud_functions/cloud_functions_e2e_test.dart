@@ -204,5 +204,5 @@ void main() {
         skip: 'timeout is not supported',
       );
     });
-  });
+  }, skip: defaultTargetPlatform == TargetPlatform.linux);
 }
